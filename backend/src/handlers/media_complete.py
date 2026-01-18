@@ -1,0 +1,56 @@
+import time
+import boto3
+from common.config import TABLE_MEDIA, MEDIA_BUCKET
+from common.db import put_item
+from common.responses import ok, err
+from common.auth import require_invite, require_role
+from common.audit import write_audit
+
+s3 = boto3.client("s3")
+
+def handle_media_complete(event, body):
+    invite, auth_err = require_invite(event)
+    if auth_err:
+        return auth_err
+
+    role_err = require_role(invite, {"uploader", "admin"})
+    if role_err:
+        return role_err
+
+    team_id = invite["team_id"]
+
+    media_id = (body or {}).get("media_id", "").strip()
+    object_key = (body or {}).get("object_key", "").strip()
+    filename = (body or {}).get("filename", "").strip()
+    content_type = (body or {}).get("content_type", "").strip().lower()
+    size_bytes = int((body or {}).get("size_bytes", 0))
+
+    if not media_id or not object_key or not filename or not content_type or size_bytes <= 0:
+        return err("media_id, object_key, filename, content_type, size_bytes are required.", 400, code="validation_error")
+
+    # Optional safety: confirm object exists (prevents phantom records).
+    # This requires s3:HeadObject permission (we include it).
+    try:
+        s3.head_object(Bucket=MEDIA_BUCKET, Key=object_key)
+    except Exception:
+        return err("Uploaded object not found yet.", 409, code="conflict")
+
+    ts = int(time.time())
+    item = {
+        "team_id": team_id,
+        "sk": f"{ts}#{media_id}",
+        "media_id": media_id,
+        "object_key": object_key,
+        "filename": filename,
+        "content_type": content_type,
+        "size_bytes": size_bytes,
+        "created_at": ts,
+        # GSI for lookup by media_id
+        "gsi1pk": media_id,
+        "gsi1sk": f"{ts}",
+    }
+    put_item(TABLE_MEDIA, item)
+
+    write_audit(team_id, "media_complete", invite_token=invite.get("_raw_token"), meta={"media_id": media_id})
+
+    return ok({"ok": True, "media_id": media_id}, 201)
