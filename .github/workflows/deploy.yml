@@ -20,6 +20,7 @@ jobs:
           ACTIONS_ID_TOKEN_REQUEST_URL: ${{ env.ACTIONS_ID_TOKEN_REQUEST_URL }}
           ACTIONS_ID_TOKEN_REQUEST_TOKEN: ${{ env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}
         run: |
+          set -euo pipefail
           if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL}" ]; then
             echo "ACTIONS_ID_TOKEN_REQUEST_URL is empty (id-token permission missing?)" && exit 1
           fi
@@ -36,7 +37,7 @@ payload = parts[1] + '==='  # pad
 data = json.loads(base64.urlsafe_b64decode(payload))
 print(json.dumps(data, indent=2))
 PY
-      
+
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
