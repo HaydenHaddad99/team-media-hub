@@ -1,0 +1,14 @@
+{
+  "Variables": {
+    "MEDIA_BUCKET": "teammediahubstack-mediabucketbcbb02ba-yya0tjoyk8dm",
+    "TABLE_TEAMS": "TeamMediaHubStack-TeamsTableE80F987E-1THOJUJC7RNIZ",
+    "TABLE_INVITES": "TeamMediaHubStack-InvitesTableE9630325-1P43ZIUHYTGNW",
+    "TABLE_MEDIA": "TeamMediaHubStack-MediaTableCFC93525-8YTEVX5PQ0Z9",
+    "TABLE_AUDIT": "TeamMediaHubStack-AuditTableB07F8EEB-UTXBXRWIM6DI",
+    "SIGNED_URL_TTL_SECONDS": "900",
+    "MAX_UPLOAD_BYTES": "314572800",
+    "ALLOWED_CONTENT_TYPES": "image/jpeg,image/png,image/heic,video/mp4,video/quicktime",
+    "SETUP_KEY": "my-secret-setup-key-12345",
+    "FRONTEND_BASE_URL": "https://d23f0eycmgsiz6.cloudfront.net"
+  }
+}

@@ -1,0 +1,46 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+      
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm install
+          npm run build
+      
+      - name: Deploy with CDK
+        env:
+          SETUP_KEY: ${{ secrets.SETUP_KEY }}
+        run: |
+          cd infra
+          python -m pip install -q -r requirements.txt
+          cdk deploy --require-approval never

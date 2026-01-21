@@ -2,7 +2,7 @@
 import time
 import secrets
 
-from common.config import TABLE_INVITES
+from common.config import TABLE_INVITES, FRONTEND_BASE_URL
 from common.db import put_item
 from common.responses import ok, err
 from common.auth import require_invite, require_role, token_hash
@@ -39,8 +39,8 @@ def handle_invites_create(event, body):
         "expires_at": ts + (expires_in_days * 24 * 3600),
     })
 
-    # Build invite URL for front-end (you’ll replace with CloudFront URL later)
-    # For MVP we return just the token too.
+    # Build invite URL for front-end with CloudFront domain
+    invite_url = f"{FRONTEND_BASE_URL}/?token={raw_token}" if FRONTEND_BASE_URL else None
     write_audit(team_id, "invite_created", invite_token=invite.get("_raw_token"), meta={"role": role, "expires_in_days": expires_in_days})
 
     return ok({
@@ -48,5 +48,5 @@ def handle_invites_create(event, body):
         "role": role,
         "expires_in_days": expires_in_days,
         "invite_token": raw_token,
-        "invite_url_hint": f"/?token={raw_token}",
+        "invite_url": invite_url,  # Real shareable URL if FRONTEND_BASE_URL is set
     }, 201)

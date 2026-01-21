@@ -9,6 +9,10 @@ TABLE_AUDIT = os.getenv("TABLE_AUDIT", "")
 
 MEDIA_BUCKET = os.getenv("MEDIA_BUCKET", "")
 
+FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "").rstrip("/")
+
+SETUP_KEY = os.getenv("SETUP_KEY", "")  # Required to create teams; empty string disables check (dev only)
+
 SIGNED_URL_TTL_SECONDS = int(os.getenv("SIGNED_URL_TTL_SECONDS", "900"))  # 15 min default
 MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", str(300 * 1024 * 1024)))  # 300MB MVP cap
 

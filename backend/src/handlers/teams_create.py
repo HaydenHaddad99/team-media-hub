@@ -3,7 +3,7 @@ import time
 import uuid
 import secrets
 
-from common.config import TABLE_TEAMS, TABLE_INVITES
+from common.config import TABLE_TEAMS, TABLE_INVITES, SETUP_KEY, FRONTEND_BASE_URL
 from common.db import put_item
 from common.responses import ok, err
 from common.auth import token_hash
@@ -13,6 +13,13 @@ def _now() -> int:
     return int(time.time())
 
 def handle_teams_create(event, body):
+    # Validate setup key if configured
+    if SETUP_KEY:
+        headers = (event or {}).get("headers") or {}
+        provided_key = headers.get("x-setup-key") or headers.get("X-Setup-Key") or ""
+        if provided_key != SETUP_KEY:
+            return err("Invalid or missing setup key.", 403, code="forbidden")
+
     team_name = (body or {}).get("team_name", "").strip()
     if not team_name:
         return err("team_name is required.", 400, code="validation_error")
@@ -38,8 +45,11 @@ def handle_teams_create(event, body):
 
     write_audit(team_id, "team_created", invite_token=None, meta={"team_name": team_name})
 
+    invite_url = f"{FRONTEND_BASE_URL}/?token={raw_token}" if FRONTEND_BASE_URL else None
+
     return ok({
         "team_id": team_id,
         "team_name": team_name,
         "admin_invite_token": raw_token,  # Show once. Store securely client-side.
+        "invite_url": invite_url,  # Shareable admin invite link
     }, 201)

@@ -1,3 +1,4 @@
+import os
 
 from constructs import Construct
 from aws_cdk import (
@@ -11,23 +12,44 @@ from aws_cdk import (
     aws_s3 as s3,
     aws_dynamodb as dynamodb,
     aws_iam as iam,
+    aws_cloudfront as cloudfront,
+    aws_cloudfront_origins as origins,
+    aws_s3_deployment as s3deploy,
 )
 
 class TeamMediaHubStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        # -------- Storage (private) --------
+        # -------------------------
+        # Media Storage (private)
+        # -------------------------
         media_bucket = s3.Bucket(
             self,
             "MediaBucket",
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
             encryption=s3.BucketEncryption.S3_MANAGED,
             enforce_ssl=True,
-            removal_policy=RemovalPolicy.DESTROY,  # MVP/dev only. Change to RETAIN for prod.
-            auto_delete_objects=True,              # MVP/dev only. Remove for prod.
+            removal_policy=RemovalPolicy.DESTROY,  # dev/MVP only
+            auto_delete_objects=True,              # dev/MVP only
+            cors=[
+                s3.CorsRule(
+                    allowed_methods=[
+                        s3.HttpMethods.GET,
+                        s3.HttpMethods.HEAD,
+                        s3.HttpMethods.PUT,
+                        s3.HttpMethods.POST,
+                    ],
+                    allowed_origins=["*"],  # tighten to CloudFront domain if desired
+                    allowed_headers=["*"],
+                    max_age=3600,
+                )
+            ],
         )
 
+        # -------------------------
+        # App Data (DynamoDB)
+        # -------------------------
         teams_table = dynamodb.Table(
             self,
             "TeamsTable",
@@ -69,7 +91,9 @@ class TeamMediaHubStack(Stack):
             removal_policy=RemovalPolicy.DESTROY,
         )
 
-        # -------- Lambda (single API function for MVP) --------
+        # -------------------------
+        # Backend: Lambda + HTTP API
+        # -------------------------
         api_fn = _lambda.Function(
             self,
             "ApiFunction",
@@ -86,31 +110,33 @@ class TeamMediaHubStack(Stack):
                 "TABLE_AUDIT": audit_table.table_name,
                 "SIGNED_URL_TTL_SECONDS": "900",
                 "MAX_UPLOAD_BYTES": str(300 * 1024 * 1024),
-                # Keep allow-list explicit for security posture
                 "ALLOWED_CONTENT_TYPES": "image/jpeg,image/png,image/heic,video/mp4,video/quicktime",
+                "SETUP_KEY": os.getenv("SETUP_KEY", ""),
+                # FRONTEND_BASE_URL will be set after we create CloudFront distribution
             },
         )
 
-        # -------- IAM (least privilege for MVP) --------
         teams_table.grant_read_write_data(api_fn)
         invites_table.grant_read_write_data(api_fn)
         media_table.grant_read_write_data(api_fn)
         audit_table.grant_read_write_data(api_fn)
 
-        # S3 access restricted to the media prefix
         api_fn.add_to_role_policy(iam.PolicyStatement(
             actions=["s3:PutObject", "s3:GetObject", "s3:HeadObject"],
             resources=[media_bucket.arn_for_objects("media/*")],
         ))
 
-        # -------- HTTP API Gateway --------
         http_api = apigwv2.HttpApi(
             self,
             "HttpApi",
             cors_preflight=apigwv2.CorsPreflightOptions(
-                allow_headers=["content-type", "x-invite-token"],
-                allow_methods=[apigwv2.CorsHttpMethod.GET, apigwv2.CorsHttpMethod.POST, apigwv2.CorsHttpMethod.OPTIONS],
-                allow_origins=["*"],  # Tighten to CloudFront domain later
+                allow_headers=["content-type", "x-invite-token", "x-setup-key"],
+                allow_methods=[
+                    apigwv2.CorsHttpMethod.GET,
+                    apigwv2.CorsHttpMethod.POST,
+                    apigwv2.CorsHttpMethod.OPTIONS,
+                ],
+                allow_origins=["*"],  # tighten after you know your CloudFront domain
                 max_age=Duration.days(10),
             ),
         )
@@ -120,21 +146,83 @@ class TeamMediaHubStack(Stack):
             handler=api_fn
         )
 
-        # Routes
         for route in [
             ("/health", apigwv2.HttpMethod.GET),
+            ("/me", apigwv2.HttpMethod.GET),
             ("/teams", apigwv2.HttpMethod.POST),
             ("/invites", apigwv2.HttpMethod.POST),
+            ("/invites/revoke", apigwv2.HttpMethod.POST),
             ("/media", apigwv2.HttpMethod.GET),
             ("/media/upload-url", apigwv2.HttpMethod.POST),
             ("/media/complete", apigwv2.HttpMethod.POST),
             ("/media/download-url", apigwv2.HttpMethod.GET),
         ]:
-            http_api.add_routes(
-                path=route[0],
-                methods=[route[1]],
-                integration=integration,
-            )
+            http_api.add_routes(path=route[0], methods=[route[1]], integration=integration)
 
+        # -------------------------
+        # Frontend Hosting: S3 + CloudFront (private bucket)
+        # -------------------------
+        site_bucket = s3.Bucket(
+            self,
+            "SiteBucket",
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            encryption=s3.BucketEncryption.S3_MANAGED,
+            enforce_ssl=True,
+            removal_policy=RemovalPolicy.DESTROY,  # dev/MVP only
+            auto_delete_objects=True,              # dev/MVP only
+        )
+
+        oai = cloudfront.OriginAccessIdentity(self, "SiteOAI")
+        site_bucket.grant_read(oai)
+
+        distribution = cloudfront.Distribution(
+            self,
+            "SiteDistribution",
+            default_behavior=cloudfront.BehaviorOptions(
+                origin=origins.S3Origin(site_bucket, origin_access_identity=oai),
+                viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+                allowed_methods=cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
+                cache_policy=cloudfront.CachePolicy.CACHING_OPTIMIZED,
+            ),
+            default_root_object="index.html",
+            error_responses=[
+                # SPA routing: any "missing" path loads index.html
+                cloudfront.ErrorResponse(
+                    http_status=403,
+                    response_http_status=200,
+                    response_page_path="/index.html",
+                    ttl=Duration.minutes(1),
+                ),
+                cloudfront.ErrorResponse(
+                    http_status=404,
+                    response_http_status=200,
+                    response_page_path="/index.html",
+                    ttl=Duration.minutes(1),
+                ),
+            ],
+        )
+
+        # Now that we have a stable site URL, make backend return real invite URLs
+        api_fn.add_environment("FRONTEND_BASE_URL", f"https://{distribution.domain_name}")
+
+        # Upload the built frontend assets from ../frontend/dist
+        # IMPORTANT: build frontend before `cdk deploy`
+        s3deploy.BucketDeployment(
+            self,
+            "DeployFrontend",
+            sources=[s3deploy.Source.asset("../frontend/dist")],
+            destination_bucket=site_bucket,
+            distribution=distribution,
+            distribution_paths=["/*"],
+            # Light caching for MVP; tweak later:
+            cache_control=[
+                s3deploy.CacheControl.from_string("public, max-age=300"),
+            ],
+        )
+
+        # -------------------------
+        # Outputs
+        # -------------------------
         CfnOutput(self, "ApiBaseUrl", value=http_api.url or "")
         CfnOutput(self, "MediaBucketName", value=media_bucket.bucket_name)
+        CfnOutput(self, "SiteUrl", value=f"https://{distribution.domain_name}")

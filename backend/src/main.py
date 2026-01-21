@@ -1,10 +1,13 @@
 import json
+import traceback
 from typing import Any, Dict, Tuple
 
 from common.responses import ok, err
 from handlers.health import handle_health
+from handlers.me import handle_me
 from handlers.teams_create import handle_teams_create
 from handlers.invites_create import handle_invites_create
+from handlers.invites_revoke import handle_invites_revoke
 from handlers.media_list import handle_media_list
 from handlers.media_presign_upload import handle_media_presign_upload
 from handlers.media_complete import handle_media_complete
@@ -41,6 +44,9 @@ def handler(event: Dict, context: Any) -> Dict[str, Any]:
         if method == "GET" and path == "/health":
             return handle_health(event)
 
+        if method == "GET" and path == "/me":
+            return handle_me(event)
+
         if method == "POST" and path == "/teams":
             body = _json_body(event)
             return handle_teams_create(event, body)
@@ -48,6 +54,10 @@ def handler(event: Dict, context: Any) -> Dict[str, Any]:
         if method == "POST" and path == "/invites":
             body = _json_body(event)
             return handle_invites_create(event, body)
+
+        if method == "POST" and path == "/invites/revoke":
+            body = _json_body(event)
+            return handle_invites_revoke(event, body)
 
         if method == "GET" and path == "/media":
             return handle_media_list(event)
@@ -65,6 +75,8 @@ def handler(event: Dict, context: Any) -> Dict[str, Any]:
 
         return err("Not found.", 404, code="not_found")
 
-    except Exception:
-        # Do not leak exception details in MVP responses.
-        return err("Server error.", 500, code="server_error")
+    except Exception as e:
+        # Log the full traceback for debugging
+        print(f"ERROR: {str(e)}")
+        print(traceback.format_exc())
+        return err(f"Server error: {str(e)}", 500, code="server_error")

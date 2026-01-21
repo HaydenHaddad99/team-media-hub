@@ -1,0 +1,134 @@
+.upload-form {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.upload-form h2 {
+  font-size: 20px;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.file-input-wrapper {
+  position: relative;
+  margin-bottom: 16px;
+}
+
+#file-input {
+  position: absolute;
+  left: -9999px;
+}
+
+.file-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  padding: 16px;
+  border: 2px dashed #ddd;
+  border-radius: 8px;
+  background: #f9f9f9;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  font-size: 16px;
+  color: #666;
+}
+
+.file-label:hover {
+  border-color: #667eea;
+  background: #f0f0ff;
+}
+
+#file-input:disabled + .file-label {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.file-info {
+  background: #f0f0ff;
+  border-left: 4px solid #667eea;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.file-info p {
+  margin: 4px 0;
+  font-size: 14px;
+  color: #333;
+}
+
+.file-type {
+  color: #666;
+  font-size: 12px;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: #eee;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 12px;
+  position: relative;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  transition: width 0.3s ease;
+  border-radius: 4px;
+}
+
+.progress-text {
+  position: absolute;
+  right: 0;
+  top: -20px;
+  font-size: 12px;
+  color: #666;
+}
+
+.upload-btn {
+  width: 100%;
+  background: #667eea;
+  color: white;
+  padding: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 8px;
+  margin-top: 8px;
+}
+
+.upload-btn:hover:not(:disabled) {
+  background: #5568d3;
+  transform: translateY(-2px);
+}
+
+.upload-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.error {
+  color: #dc3545;
+  font-size: 14px;
+  padding: 12px;
+  background: #f8d7da;
+  border-radius: 6px;
+  border-left: 4px solid #dc3545;
+  margin-bottom: 16px;
+}
+
+@media (min-width: 768px) {
+  .upload-form {
+    padding: 32px;
+  }
+
+  .file-label {
+    min-height: 160px;
+    font-size: 18px;
+  }
+}
