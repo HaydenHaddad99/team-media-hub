@@ -9,7 +9,10 @@
       "Action": "sts:AssumeRoleWithWebIdentity",
       "Condition": {
         "StringLike": {
-          "token.actions.githubusercontent.com:sub": "repo:haydenhaddad99/team-media-hub:*"
+          "token.actions.githubusercontent.com:sub": [
+            "repo:HaydenHaddad99/team-media-hub:*",
+            "repo:haydenhaddad99/team-media-hub:*"
+          ]
         },
         "StringEquals": {
           "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
