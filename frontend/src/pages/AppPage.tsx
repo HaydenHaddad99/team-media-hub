@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { clearStoredToken, getMe, UserInfo } from "../lib/api";
+import { clearStoredToken, getMe, MeResponse } from "../lib/api";
 import { UploadButton } from "../components/UploadButton";
 import { MediaGallery } from "../components/MediaGallery";
 
 export function AppPage({ onLogout }: { onLogout: () => void }) {
   const [refresh, setRefresh] = useState(0);
-  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [userInfo, setUserInfo] = useState<MeResponse | null>(null);
 
   useEffect(() => {
     getMe()
@@ -24,7 +24,7 @@ export function AppPage({ onLogout }: { onLogout: () => void }) {
     setRefresh((r) => r + 1);
   }
 
-  const canUpload = userInfo?.role === "uploader" || userInfo?.role === "admin";
+  const canUpload = userInfo?.invite?.role === "uploader" || userInfo?.invite?.role === "admin";
 
   return (
     <div className="appPage">

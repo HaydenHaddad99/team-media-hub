@@ -1,5 +1,4 @@
 import json
-import traceback
 from typing import Any, Dict, Tuple
 
 from common.responses import ok, err
@@ -7,36 +6,32 @@ from handlers.health import handle_health
 from handlers.me import handle_me
 from handlers.teams_create import handle_teams_create
 from handlers.invites_create import handle_invites_create
-from handlers.invites_revoke import handle_invites_revoke
 from handlers.media_list import handle_media_list
 from handlers.media_presign_upload import handle_media_presign_upload
 from handlers.media_complete import handle_media_complete
 from handlers.media_presign_download import handle_media_presign_download
 
 def _route(event: Dict) -> Tuple[str, str]:
-    # HTTP API v2 event
     rc = (event.get("requestContext") or {})
     http = (rc.get("http") or {})
     method = http.get("method", "GET")
     path = event.get("rawPath") or "/"
     return method.upper(), path
 
-def _json_body(event: Dict) -> Dict[str, Any]:
+def _json_body(event: Dict) -> Dict:
     body = event.get("body")
     if not body:
         return {}
     if event.get("isBase64Encoded"):
-        # Not expected for JSON requests; keep simple for MVP.
         return {}
     try:
         return json.loads(body)
     except Exception:
         return {}
 
-def handler(event: Dict, context: Any) -> Dict[str, Any]:
+def handler(event: Dict, context: Any) -> Dict:
     method, path = _route(event)
 
-    # CORS preflight
     if method == "OPTIONS":
         return ok({"ok": True})
 
@@ -55,10 +50,6 @@ def handler(event: Dict, context: Any) -> Dict[str, Any]:
             body = _json_body(event)
             return handle_invites_create(event, body)
 
-        if method == "POST" and path == "/invites/revoke":
-            body = _json_body(event)
-            return handle_invites_revoke(event, body)
-
         if method == "GET" and path == "/media":
             return handle_media_list(event)
 
@@ -75,8 +66,5 @@ def handler(event: Dict, context: Any) -> Dict[str, Any]:
 
         return err("Not found.", 404, code="not_found")
 
-    except Exception as e:
-        # Log the full traceback for debugging
-        print(f"ERROR: {str(e)}")
-        print(traceback.format_exc())
-        return err(f"Server error: {str(e)}", 500, code="server_error")
+    except Exception:
+        return err("Server error.", 500, code="server_error")

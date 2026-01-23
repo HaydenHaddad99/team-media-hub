@@ -146,11 +146,24 @@ export function getCurrentToken(): string | null {
   return getStoredToken();
 }
 
-export type UserInfo = {
-  team_id: string;
-  role: string;
+export type MeResponse = {
+  team: { team_id: string; team_name: string };
+  invite: { role: "viewer" | "uploader" | "admin"; expires_at?: number };
 };
 
-export async function getMe(): Promise<UserInfo> {
-  return request<UserInfo>("/me", { method: "GET" });
+export async function getMe(): Promise<MeResponse> {
+  return request<MeResponse>("/me", { method: "GET" });
+}
+
+export async function createInvite(input: { role: "viewer" | "uploader"; expires_in_days?: number; team_id?: string }) {
+  return request<{
+    team_id: string;
+    role: "viewer" | "uploader" | "admin";
+    expires_in_days: number;
+    invite_token: string;
+    invite_url: string;
+  }>(`/invites`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
 }

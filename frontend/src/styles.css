@@ -151,3 +151,168 @@ body {
   margin-top: 14px;
   font-size: 12px;
 }
+.select {
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.06);
+  color: inherit;
+  outline: none;
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.68);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+  z-index: 1000;
+}
+
+.modalCard {
+  width: min(920px, 100%);
+  max-height: 92vh;
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(15, 18, 28, 0.98);
+  display: flex;
+  flex-direction: column;
+}
+
+.modalHeader, .modalFooter {
+  padding: 12px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.10);
+}
+
+.modalFooter {
+  border-bottom: none;
+  border-top: 1px solid rgba(255,255,255,0.10);
+}
+
+.modalTitle {
+  font-weight: 650;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modalBody {
+  padding: 12px;
+  overflow: auto;
+}
+
+.modalMedia {
+  width: 100%;
+  max-height: 70vh;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.04);
+  object-fit: contain;
+}
+
+.thumbGrid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (min-width: 680px) {
+  .thumbGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 980px) {
+  .thumbGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.thumbCard {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 14px;
+  overflow: hidden;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+}
+
+.thumbCard:hover {
+  border-color: rgba(0, 170, 255, 0.35);
+}
+
+.thumbMedia {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: rgba(255,255,255,0.04);
+}
+
+.thumbImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.thumbSkeleton {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.04),
+    rgba(255,255,255,0.08),
+    rgba(255,255,255,0.04)
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.2s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.thumbVideoPlaceholder {
+  width: 100%;
+  height: 100%;
+  background: rgba(255,255,255,0.04);
+  display: grid;
+  place-items: center;
+}
+
+.playBadge {
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: rgba(0,0,0,0.45);
+  border: 1px solid rgba(255,255,255,0.22);
+  font-size: 18px;
+}
+
+.thumbMeta {
+  padding: 10px 10px;
+}
+
+.thumbTitle {
+  font-weight: 650;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.thumbSub {
+  font-size: 12px;
+  margin-top: 4px;
+}
