@@ -4,12 +4,15 @@ from typing import Any, Dict, Tuple
 from common.responses import ok, err
 from handlers.health import handle_health
 from handlers.me import handle_me
+from handlers.demo import handle_demo
 from handlers.teams_create import handle_teams_create
 from handlers.invites_create import handle_invites_create
 from handlers.media_list import handle_media_list
 from handlers.media_presign_upload import handle_media_presign_upload
 from handlers.media_complete import handle_media_complete
 from handlers.media_presign_download import handle_media_presign_download
+from handlers.media_thumbnail import handle_media_thumbnail
+from handlers.media_delete import handle_media_delete
 
 def _route(event: Dict) -> Tuple[str, str]:
     rc = (event.get("requestContext") or {})
@@ -42,6 +45,9 @@ def handler(event: Dict, context: Any) -> Dict:
         if method == "GET" and path == "/me":
             return handle_me(event)
 
+        if method == "GET" and path == "/demo":
+            return handle_demo(event)
+
         if method == "POST" and path == "/teams":
             body = _json_body(event)
             return handle_teams_create(event, body)
@@ -50,8 +56,14 @@ def handler(event: Dict, context: Any) -> Dict:
             body = _json_body(event)
             return handle_invites_create(event, body)
 
+        if method == "GET" and path == "/media/thumbnail":
+            return handle_media_thumbnail(event)
+
         if method == "GET" and path == "/media":
             return handle_media_list(event)
+
+        if method == "DELETE" and path == "/media":
+            return handle_media_delete(event)
 
         if method == "POST" and path == "/media/upload-url":
             body = _json_body(event)

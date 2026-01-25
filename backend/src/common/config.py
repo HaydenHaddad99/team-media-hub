@@ -14,6 +14,7 @@ FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "").rstrip("/")
 SETUP_KEY = os.getenv("SETUP_KEY", "")  # Required to create teams; empty string disables check (dev only)
 
 SIGNED_URL_TTL_SECONDS = int(os.getenv("SIGNED_URL_TTL_SECONDS", "900"))  # 15 min default
+THUMBNAIL_URL_TTL_SECONDS = int(os.getenv("THUMBNAIL_URL_TTL_SECONDS", "3600"))  # 1 hour for thumbnails (rarely change)
 MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", str(300 * 1024 * 1024)))  # 300MB MVP cap
 
 # Allow-list for MVP. Expand later.
@@ -23,3 +24,7 @@ ALLOWED_CONTENT_TYPES = set(
         "image/jpeg,image/png,image/heic,video/mp4,video/quicktime",
     ).split(",")
 )
+
+DEMO_ENABLED = os.getenv("DEMO_ENABLED", "false").lower() == "true"
+DEMO_TEAM_ID = os.getenv("DEMO_TEAM_ID", "")
+DEMO_INVITE_TTL_DAYS = int(os.getenv("DEMO_INVITE_TTL_DAYS", "1"))

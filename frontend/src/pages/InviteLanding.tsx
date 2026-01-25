@@ -35,7 +35,7 @@ export function InviteLanding({ onReady }: { onReady: () => void }) {
     <div className="container">
       <header className="header">
         <div className="brand">Team Media Hub</div>
-        <div className="sub">Private, invite-only team photo/video sharing</div>
+        <div className="sub">A private, invite-only media space for youth sports teams — built for parents, not social networks.</div>
       </header>
 
       <div className="panel">
@@ -62,7 +62,7 @@ export function InviteLanding({ onReady }: { onReady: () => void }) {
       </div>
 
       <footer className="footer muted">
-        Privacy-first: media is stored privately and accessed via short-lived signed links.
+        We replace chaotic group chats and public Google Drive links with secure, team-only sharing.
       </footer>
     </div>
   );

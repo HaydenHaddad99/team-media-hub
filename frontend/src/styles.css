@@ -83,6 +83,13 @@ body {
   border-color: rgba(0, 170, 255, 0.35);
 }
 
+.btn.danger {
+  border-color: rgba(255, 90, 90, 0.35);
+}
+.btn.danger:hover {
+  border-color: rgba(255, 90, 90, 0.65);
+}
+
 .btn.link {
   background: transparent;
   border: none;
@@ -206,6 +213,56 @@ body {
 .modalBody {
   padding: 12px;
   overflow: auto;
+  position: relative;
+}
+
+.carouselBtn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: 32px;
+  font-weight: 300;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 10;
+  backdrop-filter: blur(4px);
+}
+
+.carouselBtn:hover {
+  background: rgba(0, 0, 0, 0.8);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.carouselBtnPrev {
+  left: 16px;
+}
+
+.carouselBtnNext {
+  right: 16px;
+}
+
+@media (max-width: 680px) {
+  .carouselBtn {
+    width: 40px;
+    height: 40px;
+    font-size: 28px;
+  }
+  
+  .carouselBtnPrev {
+    left: 8px;
+  }
+  
+  .carouselBtnNext {
+    right: 8px;
+  }
 }
 
 .modalMedia {
@@ -243,17 +300,60 @@ body {
   cursor: pointer;
   display: flex;
   flex-direction: column;
+  aspect-ratio: 1 / 1;
 }
 
 .thumbCard:hover {
   border-color: rgba(0, 170, 255, 0.35);
 }
 
+.thumbCardSelected {
+  border-color: rgba(0, 170, 255, 0.8);
+  box-shadow: 0 0 0 2px rgba(0, 170, 255, 0.35) inset;
+}
+
 .thumbMedia {
   position: relative;
   width: 100%;
-  aspect-ratio: 1 / 1;
+  height: 100%;
   background: rgba(255,255,255,0.04);
+}
+
+.selectBadge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.22);
+  background: rgba(0,0,0,0.35);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+}
+
+.selectBadge.selected {
+  background: rgba(0, 170, 255, 0.65);
+  border-color: rgba(0, 170, 255, 0.85);
+}
+
+.albumBadge {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(0, 0, 0, 0.75);
+  color: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  max-width: calc(100% - 16px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  backdrop-filter: blur(4px);
 }
 
 .thumbImg {
@@ -287,6 +387,15 @@ body {
   background: rgba(255,255,255,0.04);
   display: grid;
   place-items: center;
+  position: relative;
+}
+
+.thumbVideoPlaceholder img {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
 }
 
 .playBadge {
@@ -298,6 +407,8 @@ body {
   background: rgba(0,0,0,0.45);
   border: 1px solid rgba(255,255,255,0.22);
   font-size: 18px;
+  position: relative;
+  z-index: 1;
 }
 
 .thumbMeta {
@@ -315,4 +426,20 @@ body {
 .thumbSub {
   font-size: 12px;
   margin-top: 4px;
+}
+
+/* Skeleton Loading Animation */
+@keyframes skeleton-pulse {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.skeleton-pulse {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
 }

@@ -6,10 +6,12 @@ from aws_cdk import (
     Duration,
     RemovalPolicy,
     CfnOutput,
+    CfnParameter,
     aws_lambda as _lambda,
     aws_apigatewayv2 as apigwv2,
     aws_apigatewayv2_integrations as apigwv2_integrations,
     aws_s3 as s3,
+    aws_s3_notifications as s3n,
     aws_dynamodb as dynamodb,
     aws_iam as iam,
     aws_cloudfront as cloudfront,
@@ -20,6 +22,36 @@ from aws_cdk import (
 class TeamMediaHubStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
+
+        # -------------------------
+        # CloudFormation Parameters
+        # -------------------------
+        demo_enabled = CfnParameter(
+            self,
+            "DemoEnabled",
+            type="String",
+            default="false",
+            allowed_values=["true", "false"],
+            description="Enable public demo mode (creates short-lived viewer tokens)"
+        )
+
+        demo_team_id = CfnParameter(
+            self,
+            "DemoTeamId",
+            type="String",
+            default="",
+            description="Team ID for demo mode (use existing team or create one)"
+        )
+
+        demo_invite_ttl_days = CfnParameter(
+            self,
+            "DemoInviteTtlDays",
+            type="Number",
+            default=1,
+            min_value=1,
+            max_value=30,
+            description="TTL in days for demo invite tokens"
+        )
 
         # -------------------------
         # Media Storage (private)
@@ -42,6 +74,7 @@ class TeamMediaHubStack(Stack):
                     ],
                     allowed_origins=["*"],  # tighten to CloudFront domain if desired
                     allowed_headers=["*"],
+                    exposed_headers=["ETag", "x-amz-version-id", "Content-Type", "Content-Length"],
                     max_age=3600,
                 )
             ],
@@ -112,6 +145,9 @@ class TeamMediaHubStack(Stack):
                 "MAX_UPLOAD_BYTES": str(300 * 1024 * 1024),
                 "ALLOWED_CONTENT_TYPES": "image/jpeg,image/png,image/heic,video/mp4,video/quicktime",
                 "SETUP_KEY": os.getenv("SETUP_KEY", ""),
+                "DEMO_ENABLED": demo_enabled.value_as_string,
+                "DEMO_TEAM_ID": demo_team_id.value_as_string,
+                "DEMO_INVITE_TTL_DAYS": demo_invite_ttl_days.value_as_string,
                 # FRONTEND_BASE_URL will be set after we create CloudFront distribution
             },
         )
@@ -122,8 +158,11 @@ class TeamMediaHubStack(Stack):
         audit_table.grant_read_write_data(api_fn)
 
         api_fn.add_to_role_policy(iam.PolicyStatement(
-            actions=["s3:PutObject", "s3:GetObject", "s3:HeadObject"],
-            resources=[media_bucket.arn_for_objects("media/*")],
+            actions=["s3:PutObject", "s3:GetObject", "s3:HeadObject", "s3:DeleteObject"],
+            resources=[
+                media_bucket.arn_for_objects("media/*"),
+                media_bucket.arn_for_objects("thumbnails/*"),  # Allow API to fetch thumbnails
+            ],
         ))
 
         http_api = apigwv2.HttpApi(
@@ -134,6 +173,7 @@ class TeamMediaHubStack(Stack):
                 allow_methods=[
                     apigwv2.CorsHttpMethod.GET,
                     apigwv2.CorsHttpMethod.POST,
+                    apigwv2.CorsHttpMethod.DELETE,
                     apigwv2.CorsHttpMethod.OPTIONS,
                 ],
                 allow_origins=["*"],  # tighten after you know your CloudFront domain
@@ -149,15 +189,55 @@ class TeamMediaHubStack(Stack):
         for route in [
             ("/health", apigwv2.HttpMethod.GET),
             ("/me", apigwv2.HttpMethod.GET),
+            ("/demo", apigwv2.HttpMethod.GET),
             ("/teams", apigwv2.HttpMethod.POST),
             ("/invites", apigwv2.HttpMethod.POST),
             ("/invites/revoke", apigwv2.HttpMethod.POST),
             ("/media", apigwv2.HttpMethod.GET),
+            ("/media", apigwv2.HttpMethod.DELETE),
+            ("/media/thumbnail", apigwv2.HttpMethod.GET),
             ("/media/upload-url", apigwv2.HttpMethod.POST),
             ("/media/complete", apigwv2.HttpMethod.POST),
             ("/media/download-url", apigwv2.HttpMethod.GET),
         ]:
             http_api.add_routes(path=route[0], methods=[route[1]], integration=integration)
+
+        # -------------------------
+        # Thumbnail Generation Lambda
+        # -------------------------
+        pillow_layer = _lambda.LayerVersion(
+            self,
+            "PillowLayer",
+            code=_lambda.Code.from_asset("../layer_pillow/pillow_layer.zip"),
+            compatible_runtimes=[_lambda.Runtime.PYTHON_3_12],
+            description="Pillow for image thumbnail generation",
+        )
+
+        thumb_fn = _lambda.Function(
+            self,
+            "ThumbnailFunction",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="thumbs.thumbnail_handler.handler",
+            code=_lambda.Code.from_asset("../backend/src"),
+            timeout=Duration.seconds(30),
+            memory_size=1024,
+            environment={
+                "MEDIA_BUCKET": media_bucket.bucket_name,
+                "TABLE_MEDIA": media_table.table_name,
+                "MEDIA_GSI_NAME": "gsi1",
+            },
+            layers=[pillow_layer],
+        )
+
+        media_bucket.grant_read(thumb_fn, "media/*")
+        media_bucket.grant_put(thumb_fn, "thumbnails/*")
+        media_table.grant_read_write_data(thumb_fn)
+
+        media_bucket.add_event_notification(
+            s3.EventType.OBJECT_CREATED,
+            s3n.LambdaDestination(thumb_fn),
+            s3.NotificationKeyFilter(prefix="media/")
+        )
 
         # -------------------------
         # Frontend Hosting: S3 + CloudFront (private bucket)

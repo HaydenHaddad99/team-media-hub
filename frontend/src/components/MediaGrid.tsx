@@ -1,31 +1,72 @@
 import React, { useState } from "react";
-import { MediaItem } from "../lib/api";
+import { MediaItem, presignDownload, deleteMedia } from "../lib/api";
 import { PreviewModal } from "./PreviewModal";
 import { ThumbnailTile } from "./ThumbnailTile";
-import { getSignedMediaUrl } from "../lib/mediaUrlCache";
+import { SkeletonCard } from "./SkeletonCard";
 
-export function MediaGrid({ items }: { items: MediaItem[] }) {
+export function MediaGrid({
+  items,
+  loading = false,
+  canDelete,
+  onDeleted,
+  selectMode = false,
+  selectedIds,
+  onToggleSelect,
+}: {
+  items: MediaItem[];
+  loading?: boolean;
+  canDelete?: boolean;
+  onDeleted?: () => void;
+  selectMode?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (item: MediaItem) => void;
+}) {
   const [err, setErr] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const [preview, setPreview] = useState<{
     open: boolean;
-    title: string;
-    contentType: string;
-    url: string;
-  }>({ open: false, title: "", contentType: "", url: "" });
+    currentIndex: number;
+  }>({ open: false, currentIndex: -1 });
 
-  async function openItem(item: MediaItem, maybeUrl?: string) {
+  async function openItem(item: MediaItem) {
+    const index = items.findIndex(i => i.media_id === item.media_id);
+    if (index === -1) return;
+    
+    setPreview({
+      open: true,
+      currentIndex: index,
+    });
+  }
+
+  function navigateCarousel(direction: 1 | -1) {
+    setPreview(prev => {
+      const newIndex = prev.currentIndex + direction;
+      if (newIndex < 0 || newIndex >= items.length) return prev;
+      return { ...prev, currentIndex: newIndex };
+    });
+  }
+
+  async function handleDelete() {
+    if (!canDelete || preview.currentIndex === -1) return;
+
+    const currentItem = items[preview.currentIndex];
+    if (!currentItem) return;
+
+    const yes = window.confirm("Delete this media? This cannot be undone.");
+    if (!yes) return;
+
     try {
       setErr(null);
-      setBusyId(item.media_id);
-
-      const url = maybeUrl || (await getSignedMediaUrl(item.media_id));
-      setPreview({ open: true, title: item.filename, contentType: item.content_type, url });
+      setDeleting(true);
+      await deleteMedia(currentItem.media_id);
+      setPreview({ open: false, currentIndex: -1 });
+      onDeleted?.();
     } catch (ex: any) {
-      setErr(ex?.message || "Failed to open media");
+      setErr(ex?.message || "Delete failed");
     } finally {
-      setBusyId(null);
+      setDeleting(false);
     }
   }
 
@@ -35,17 +76,37 @@ export function MediaGrid({ items }: { items: MediaItem[] }) {
       {busyId ? <div className="muted" style={{ marginBottom: 8 }}>Loading…</div> : null}
 
       <div className="thumbGrid">
-        {items.map((item) => (
-          <ThumbnailTile key={item.media_id} item={item} onOpen={openItem} />
-        ))}
+        {loading ? (
+          // Show 8 skeleton placeholders while loading
+          Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={`skeleton-${i}`} />)
+        ) : (
+          items.map((item) => (
+            <ThumbnailTile
+              key={item.media_id}
+              item={item}
+              onClick={(it) => {
+                if (selectMode) {
+                  onToggleSelect?.(it);
+                } else {
+                  openItem(it);
+                }
+              }}
+              selected={selectedIds?.has(item.media_id) || false}
+              selectMode={selectMode}
+            />
+          ))
+        )}
       </div>
 
       <PreviewModal
         open={preview.open}
-        title={preview.title}
-        contentType={preview.contentType}
-        url={preview.url}
-        onClose={() => setPreview((p) => ({ ...p, open: false }))}
+        items={items}
+        currentIndex={preview.currentIndex}
+        onNavigate={navigateCarousel}
+        canDelete={!!canDelete}
+        deleting={deleting}
+        onDelete={handleDelete}
+        onClose={() => setPreview({ open: false, currentIndex: -1 })}
       />
     </div>
   );

@@ -4,11 +4,14 @@ import {
   setStoredToken,
   getCurrentToken,
   clearStoredToken,
+  getDemoInvite,
 } from "../lib/api";
 
 export function Landing({ onReady }: { onReady: () => void }) {
   const [token, setToken] = useState("");
   const [showManual, setShowManual] = useState(false);
+  const [demoBusy, setDemoBusy] = useState(false);
+  const [demoErr, setDemoErr] = useState("");
 
   useEffect(() => {
     const urlToken = getTokenFromUrl();
@@ -35,6 +38,20 @@ export function Landing({ onReady }: { onReady: () => void }) {
     onReady();
   }
 
+  async function tryDemo() {
+    setDemoBusy(true);
+    setDemoErr("");
+    try {
+      const data = await getDemoInvite();
+      setStoredToken(data.invite_token);
+      onReady();
+    } catch (err: any) {
+      setDemoErr(err?.message || "Demo unavailable");
+    } finally {
+      setDemoBusy(false);
+    }
+  }
+
   return (
     <div className="container">
       <header className="header">
@@ -51,6 +68,18 @@ export function Landing({ onReady }: { onReady: () => void }) {
           <li>Short-lived signed links for viewing/downloading</li>
         </ul>
 
+        <div style={{ marginTop: 18 }}>
+          <button 
+            className="btn primary" 
+            onClick={tryDemo} 
+            disabled={demoBusy}
+            style={{ fontSize: "1.05rem", padding: "0.7rem 1.5rem" }}
+          >
+            {demoBusy ? "Loading..." : "Try Demo"}
+          </button>
+          {demoErr && <div style={{ color: "#ff4444", marginTop: 8 }}>{demoErr}</div>}
+        </div>
+
         <div style={{ marginTop: 14 }}>
           <div className="muted">
             To join a team, open the invite link your coach or team admin shared.
@@ -58,7 +87,7 @@ export function Landing({ onReady }: { onReady: () => void }) {
         </div>
 
         <div style={{ marginTop: 14 }}>
-          <button className="btn primary" onClick={() => setShowManual(!showManual)}>
+          <button className="btn" onClick={() => setShowManual(!showManual)}>
             {showManual ? "Hide" : "Have a token? Paste it"}
           </button>
         </div>

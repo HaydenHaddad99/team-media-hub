@@ -34,6 +34,38 @@ def query_gsi(table_name: str, index_name: str, key_condition, limit: int = 1) -
     items = [_normalize(i) for i in resp.get("Items", [])]
     return items[0] if items else None
 
+def query_media_items(table_name: str, team_id: str, limit: int = 30, cursor: Optional[str] = None) -> Tuple[list, Optional[str]]:
+    """Query media items for a team with pagination."""
+    import json
+    
+    eks = None
+    if cursor:
+        try:
+            eks = json.loads(cursor)
+        except Exception:
+            eks = None
+    
+    items, lek = query(table_name, Key("team_id").eq(team_id), limit=limit, exclusive_start_key=eks)
+    next_cursor = json.dumps(lek) if lek else None
+    return items, next_cursor
+
+def query_media_by_id(table_name: str, media_id: str):
+    """
+    Returns a dict-like item with keys as plain python strings:
+    team_id, sk, object_key, thumb_key, filename, content_type...
+    Assumes GSI1 has gsi1pk = media_id.
+    """
+    resp = table(table_name).query(
+        IndexName="gsi1",
+        KeyConditionExpression=Key("gsi1pk").eq(media_id),
+        Limit=1,
+    )
+    items = resp.get("Items", [])
+    return _normalize(items[0]) if items else None
+
+def delete_item(table_name: str, key: dict):
+    table(table_name).delete_item(Key=key)
+
 def _normalize(obj: Any) -> Any:
     """
     Convert DynamoDB Decimal values (and nested structures) into JSON-serializable

@@ -72,6 +72,9 @@ export type MediaItem = {
   content_type: string;
   size_bytes: number;
   created_at: number;
+  album_name?: string;
+  thumb_key?: string | null;
+  thumb_url?: string | null;
 };
 
 export async function listMedia(params?: { limit?: number; cursor?: string | null }) {
@@ -79,9 +82,21 @@ export async function listMedia(params?: { limit?: number; cursor?: string | nul
   if (params?.limit) qs.set("limit", String(params.limit));
   if (params?.cursor) qs.set("cursor", params.cursor);
   const query = qs.toString() ? `?${qs.toString()}` : "";
-  return request<{ items: MediaItem[]; next_cursor: string | null }>(`/media${query}`, {
+  const data = await request<{ items: MediaItem[]; next_cursor: string | null }>(`/media${query}`, {
     method: "GET",
   });
+  
+  // Convert relative thumbnail URLs to absolute URLs with auth token
+  const token = getStoredToken();
+  data.items.forEach(item => {
+    if (item.thumb_url && item.thumb_url.startsWith("/")) {
+      const sep = item.thumb_url.includes("?") ? "&" : "?";
+      const tokenParam = token ? `${sep}token=${encodeURIComponent(token)}` : "";
+      item.thumb_url = `${API_BASE_URL}${item.thumb_url}${tokenParam}`;
+    }
+  });
+  
+  return data;
 }
 
 export async function presignUpload(input: {
@@ -107,6 +122,7 @@ export async function completeUpload(input: {
   filename: string;
   content_type: string;
   size_bytes: number;
+  album_name?: string;
 }) {
   return request<{ ok: boolean; media_id: string }>(`/media/complete`, {
     method: "POST",
@@ -166,4 +182,21 @@ export async function createInvite(input: { role: "viewer" | "uploader"; expires
     method: "POST",
     body: JSON.stringify(input),
   });
+}
+
+export async function getDemoInvite() {
+  return request<{
+    team_id: string;
+    role: "uploader";
+    expires_in_days: number;
+    invite_token: string;
+    invite_url: string;
+  }>(`/demo`, {
+    method: "GET",
+  });
+}
+
+export async function deleteMedia(media_id: string) {
+  const qs = new URLSearchParams({ media_id }).toString();
+  return request<{ deleted: boolean; media_id: string }>(`/media?${qs}`, { method: "DELETE" });
 }
