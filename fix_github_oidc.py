@@ -28,8 +28,10 @@ trust_policy = {
         "Action": "sts:AssumeRoleWithWebIdentity",
         "Condition": {
             "StringEquals": {
-                "token.actions.githubusercontent.com:sub": "repo:haydenhaddad99/team-media-hub:ref:refs/heads/main",
                 "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+            },
+            "StringLike": {
+                "token.actions.githubusercontent.com:sub": "repo:HaydenHaddad99/team-media-hub:*"
             }
         }
     }]
