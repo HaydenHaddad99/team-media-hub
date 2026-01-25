@@ -58,7 +58,7 @@ deploy_policy = {
         "Action": [
             "cloudformation:*", "s3:*", "lambda:*", "apigateway:*",
             "apigatewayv2:*", "dynamodb:*", "cloudfront:*", "iam:*",
-            "logs:*", "ec2:*", "sts:GetServiceBearerToken"
+            "logs:*", "ec2:*", "sts:GetServiceBearerToken", "ssm:GetParameter"
         ],
         "Resource": "*"
     }]
