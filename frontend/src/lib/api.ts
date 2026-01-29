@@ -75,6 +75,8 @@ export type MediaItem = {
   album_name?: string;
   thumb_key?: string | null;
   thumb_url?: string | null;
+  preview_key?: string | null;
+  preview_url?: string | null;
 };
 
 export async function listMedia(params?: { limit?: number; cursor?: string | null }) {

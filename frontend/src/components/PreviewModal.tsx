@@ -46,9 +46,17 @@ export function PreviewModal({
 
   // Prefetch adjacent items
   useEffect(() => {
-    async function prefetchUrl(mediaId: string) {
+    async function prefetchUrl(item: MediaItem) {
+      const mediaId = item.media_id;
       if (urlCache.has(mediaId) || prefetchingRef.current.has(mediaId)) return;
       
+      // If preview_url already available, cache it immediately
+      if (item.preview_url && !isVideo(item.content_type)) {
+        urlCache.set(mediaId, item.preview_url);
+        return;
+      }
+      
+      // Otherwise fetch presigned URL
       prefetchingRef.current.add(mediaId);
       try {
         const { download_url } = await presignDownload(mediaId);
@@ -63,11 +71,11 @@ export function PreviewModal({
     if (open && items.length > 1) {
       // Prefetch next
       if (hasNext) {
-        prefetchUrl(items[currentIndex + 1].media_id);
+        prefetchUrl(items[currentIndex + 1]);
       }
       // Prefetch prev
       if (hasPrev) {
-        prefetchUrl(items[currentIndex - 1].media_id);
+        prefetchUrl(items[currentIndex - 1]);
       }
     }
   }, [open, currentIndex, items, hasNext, hasPrev]);
@@ -88,6 +96,14 @@ export function PreviewModal({
       const cached = urlCache.get(currentItem.media_id);
       if (cached) {
         setUrl(cached);
+        setIsLoading(false);
+        return;
+      }
+      
+      // Use preview_url if available (images only, already presigned from list)
+      if (currentItem.preview_url && !isVideo(currentItem.content_type)) {
+        urlCache.set(currentItem.media_id, currentItem.preview_url);
+        setUrl(currentItem.preview_url);
         setIsLoading(false);
         return;
       }

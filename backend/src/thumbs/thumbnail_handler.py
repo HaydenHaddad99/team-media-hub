@@ -21,6 +21,9 @@ KEY_RE = re.compile(r"^media/([^/]+)/([^/]+)/(.+)$")
 MAX_SIZE = 512
 JPEG_QUALITY = 78
 
+PREVIEW_MAX = 1600
+JPEG_QUALITY_PREVIEW = 82
+
 def _parse_key(key: str):
     m = KEY_RE.match(key)
     if not m:
@@ -60,6 +63,37 @@ def _make_thumb(image_bytes: bytes) -> bytes:
     im.save(out, format="JPEG", quality=JPEG_QUALITY, optimize=True)
     return out.getvalue()
 
+def _make_preview(image_bytes: bytes) -> bytes:
+    """Generate a larger preview image (1600px max) for modal viewing"""
+    im = Image.open(io.BytesIO(image_bytes))
+
+    # Best-effort orientation fix
+    try:
+        exif = im.getexif()
+        orientation = exif.get(274)
+        if orientation == 3:
+            im = im.rotate(180, expand=True)
+        elif orientation == 6:
+            im = im.rotate(270, expand=True)
+        elif orientation == 8:
+            im = im.rotate(90, expand=True)
+    except Exception:
+        pass
+
+    im.thumbnail((PREVIEW_MAX, PREVIEW_MAX))
+
+    # Convert to RGB for JPEG
+    if im.mode in ("RGBA", "LA") or (im.mode == "P" and "transparency" in im.info):
+        bg = Image.new("RGB", im.size, (255, 255, 255))
+        bg.paste(im.convert("RGBA"), mask=im.convert("RGBA").split()[-1])
+        im = bg
+    elif im.mode != "RGB":
+        im = im.convert("RGB")
+
+    out = io.BytesIO()
+    im.save(out, format="JPEG", quality=JPEG_QUALITY_PREVIEW, optimize=True)
+    return out.getvalue()
+
 def _query_item_by_media_id(media_id: str):
     resp = ddb.query(
         TableName=DDB_TABLE,
@@ -77,6 +111,17 @@ def _update_thumb_key(team_id: str, sk: str, thumb_key: str):
         Key={"team_id": {"S": team_id}, "sk": {"S": sk}},
         UpdateExpression="SET thumb_key = :t",
         ExpressionAttributeValues={":t": {"S": thumb_key}},
+    )
+
+def _update_thumb_and_preview_keys(team_id: str, sk: str, thumb_key: str, preview_key: str):
+    ddb.update_item(
+        TableName=DDB_TABLE,
+        Key={"team_id": {"S": team_id}, "sk": {"S": sk}},
+        UpdateExpression="SET thumb_key = :t, preview_key = :p",
+        ExpressionAttributeValues={
+            ":t": {"S": thumb_key},
+            ":p": {"S": preview_key}
+        },
     )
 
 def handler(event, context):
@@ -101,13 +146,16 @@ def handler(event, context):
         try:
             raw = s3.get_object(Bucket=bucket, Key=key)["Body"].read()
             thumb_bytes = _make_thumb(raw)
+            preview_bytes = _make_preview(raw)
         except Exception as e:
             # Skip thumbnail creation for unsupported formats (e.g., HEIC without libheif)
             logger.warning(f"Failed to generate thumbnail for {key}: {str(e)}")
             continue
 
         thumb_key = f"thumbnails/{parsed['team_id']}/{parsed['media_id']}/thumb.jpg"
+        preview_key = f"previews/{parsed['team_id']}/{parsed['media_id']}/preview.jpg"
 
+        # Upload thumbnail
         s3.put_object(
             Bucket=bucket,
             Key=thumb_key,
@@ -116,10 +164,19 @@ def handler(event, context):
             CacheControl="private, max-age=86400",
         )
 
+        # Upload preview
+        s3.put_object(
+            Bucket=bucket,
+            Key=preview_key,
+            Body=preview_bytes,
+            ContentType="image/jpeg",
+            CacheControl="private, max-age=86400",
+        )
+
         item = _query_item_by_media_id(parsed["media_id"])
         if item:
             team_id = item["team_id"]["S"]
             sk = item["sk"]["S"]
-            _update_thumb_key(team_id, sk, thumb_key)
+            _update_thumb_and_preview_keys(team_id, sk, thumb_key, preview_key)
 
     return {"ok": True}
