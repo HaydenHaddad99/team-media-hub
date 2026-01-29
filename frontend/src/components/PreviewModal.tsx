@@ -195,7 +195,6 @@ export function PreviewModal({
         onTouchEnd={onTouchEnd}
       >
         <div className="modalHeader">
-          <div className="modalTitle" title={currentItem.filename}>{currentItem.filename}</div>
           <div style={{ display: "flex", gap: 8 }}>
             {items.length > 1 && (
               <div className="muted" style={{ fontSize: 13 }}>
@@ -298,7 +297,6 @@ export function PreviewModal({
         </div>
 
         <div className="modalFooter">
-          <div className="muted" style={{ fontSize: 12 }}>{currentItem.content_type}</div>
           <div className="row" style={{ gap: 10 }}>
             {canDelete && onDelete ? (
               <button className="btn btn-danger" onClick={onDelete} disabled={!!deleting || isLoading}>

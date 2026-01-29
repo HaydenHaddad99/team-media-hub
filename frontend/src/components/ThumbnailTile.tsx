@@ -53,7 +53,6 @@ export function ThumbnailTile({
         ) : (
           <div className="thumbSkeleton" style={{ background: "linear-gradient(45deg, rgba(255,255,255,0.05) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0.05) 75%, transparent 75%, transparent)", backgroundSize: "20px 20px" }} />
         )}
-        <div className="albumBadge">{item.album_name || "All uploads"}</div>
         {selectMode ? (
           <div className={`selectBadge${selected ? " selected" : ""}`}>{selected ? "✓" : ""}</div>
         ) : null}
