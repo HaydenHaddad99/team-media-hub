@@ -28,6 +28,7 @@ export function PreviewModal({
 }: Props) {
   const [url, setUrl] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
+  const [mediaLoaded, setMediaLoaded] = useState(false);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
@@ -44,14 +45,24 @@ export function PreviewModal({
       if (!currentItem) {
         setUrl("");
         setIsLoading(false);
+        setMediaLoaded(false);
         return;
       }
       
       setIsLoading(true);
+      setMediaLoaded(false);
       setUrl(""); // Clear old URL immediately to prevent flash
       
       try {
         const { download_url } = await presignDownload(currentItem.media_id);
+        
+        // Optional: Pre-decode image for smoother transition
+        if (!isVideo(currentItem.content_type)) {
+          const img = new Image();
+          img.src = download_url;
+          await img.decode().catch(() => {}); // Ignore decode errors
+        }
+        
         setUrl(download_url);
       } catch (ex) {
         console.error("Failed to load media", ex);
@@ -138,14 +149,20 @@ export function PreviewModal({
         </div>
 
         <div className="modalBody" style={{ position: "relative" }}>
-          {isLoading ? (
+          {/* Show skeleton while loading OR while media hasn't loaded yet */}
+          {(isLoading || (url && !mediaLoaded)) && (
             <div style={{ 
               display: "flex", 
               alignItems: "center", 
               justifyContent: "center",
               minHeight: 400,
               background: "rgba(0,0,0,0.05)",
-              borderRadius: 4
+              borderRadius: 4,
+              position: url ? "absolute" : "relative",
+              top: 0,
+              left: 0,
+              right: 0,
+              zIndex: 1
             }}>
               <div className="skeleton-pulse" style={{
                 width: "100%",
@@ -153,19 +170,30 @@ export function PreviewModal({
                 borderRadius: 4
               }} />
             </div>
-          ) : url ? (
+          )}
+          
+          {url && (
             isVideo(currentItem.content_type) ? (
               <video 
                 key={`video-${currentItem.media_id}`}
-                className="modalMedia" 
+                className={`modalMedia ${mediaLoaded ? 'modalMedia-loaded' : ''}`}
                 controls 
                 playsInline 
-                src={url} 
+                src={url}
+                onLoadedData={() => setMediaLoaded(true)}
               />
             ) : (
-              <img className="modalMedia" alt={currentItem.filename} src={url} />
+              <img 
+                key={`img-${currentItem.media_id}`}
+                className={`modalMedia ${mediaLoaded ? 'modalMedia-loaded' : ''}`}
+                alt={currentItem.filename} 
+                src={url}
+                onLoad={() => setMediaLoaded(true)}
+              />
             )
-          ) : (
+          )}
+          
+          {!isLoading && !url && (
             <div style={{ 
               display: "flex", 
               alignItems: "center", 

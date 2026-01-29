@@ -312,8 +312,14 @@ body {
   max-height: 70vh;
   border-radius: 14px;
   border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(255,255,255,0.04);
+  background: #000;
   object-fit: contain;
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.modalMedia-loaded {
+  opacity: 1;
 }
 
 .thumbGrid {
