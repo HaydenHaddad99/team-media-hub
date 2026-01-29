@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { MediaItem, presignDownload } from "../lib/api";
 
 type Props = {
@@ -16,6 +16,9 @@ function isVideo(contentType: string) {
   return contentType.startsWith("video/");
 }
 
+// Cache for prefetched URLs
+const urlCache = new Map<string, string>();
+
 export function PreviewModal({
   open,
   items,
@@ -32,6 +35,7 @@ export function PreviewModal({
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const prefetchingRef = useRef<Set<string>>(new Set());
 
   const currentItem = items[currentIndex];
   const hasPrev = currentIndex > 0;
@@ -39,6 +43,34 @@ export function PreviewModal({
 
   // Minimum swipe distance (in px) to trigger navigation
   const minSwipeDistance = 50;
+
+  // Prefetch adjacent items
+  useEffect(() => {
+    async function prefetchUrl(mediaId: string) {
+      if (urlCache.has(mediaId) || prefetchingRef.current.has(mediaId)) return;
+      
+      prefetchingRef.current.add(mediaId);
+      try {
+        const { download_url } = await presignDownload(mediaId);
+        urlCache.set(mediaId, download_url);
+      } catch (ex) {
+        console.error("Failed to prefetch", mediaId, ex);
+      } finally {
+        prefetchingRef.current.delete(mediaId);
+      }
+    }
+
+    if (open && items.length > 1) {
+      // Prefetch next
+      if (hasNext) {
+        prefetchUrl(items[currentIndex + 1].media_id);
+      }
+      // Prefetch prev
+      if (hasPrev) {
+        prefetchUrl(items[currentIndex - 1].media_id);
+      }
+    }
+  }, [open, currentIndex, items, hasNext, hasPrev]);
 
   useEffect(() => {
     async function loadUrl() {
@@ -51,10 +83,20 @@ export function PreviewModal({
       
       setIsLoading(true);
       setMediaLoaded(false);
+      
+      // Check cache first
+      const cached = urlCache.get(currentItem.media_id);
+      if (cached) {
+        setUrl(cached);
+        setIsLoading(false);
+        return;
+      }
+      
       setUrl(""); // Clear old URL immediately to prevent flash
       
       try {
         const { download_url } = await presignDownload(currentItem.media_id);
+        urlCache.set(currentItem.media_id, download_url);
         
         // Optional: Pre-decode image for smoother transition
         if (!isVideo(currentItem.content_type)) {
@@ -149,8 +191,21 @@ export function PreviewModal({
         </div>
 
         <div className="modalBody" style={{ position: "relative" }}>
-          {/* Show skeleton while loading OR while media hasn't loaded yet */}
-          {(isLoading || (url && !mediaLoaded)) && (
+          {/* Show thumbnail as placeholder while full-res loads */}
+          {!isVideo(currentItem.content_type) && currentItem.thumb_url && (url && !mediaLoaded) && (
+            <img 
+              className="modalMedia modalMedia-placeholder"
+              alt={currentItem.filename} 
+              src={currentItem.thumb_url}
+              style={{
+                filter: "blur(8px)",
+                transform: "scale(1.05)"
+              }}
+            />
+          )}
+          
+          {/* Show skeleton only if no thumbnail available */}
+          {(isLoading || (url && !mediaLoaded)) && (!currentItem.thumb_url || isVideo(currentItem.content_type)) && (
             <div style={{ 
               display: "flex", 
               alignItems: "center", 
