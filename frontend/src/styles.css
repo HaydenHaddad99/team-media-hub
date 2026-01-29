@@ -85,9 +85,11 @@ body {
 
 .btn.danger {
   border-color: rgba(255, 90, 90, 0.35);
+  background: rgba(255, 90, 90, 0.18);
 }
 .btn.danger:hover {
   border-color: rgba(255, 90, 90, 0.65);
+  background: rgba(255, 90, 90, 0.28);
 }
 
 .btn.link {
@@ -96,6 +98,46 @@ body {
   padding: 8px 0;
   opacity: 0.8;
   text-align: left;
+}
+
+/* Explicit button classes for modal footer */
+.btn-primary {
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 170, 255, 0.35);
+  background: rgba(0, 170, 255, 0.22);
+  color: rgba(255, 255, 255, 0.92);
+  cursor: pointer;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-block;
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: rgba(0, 170, 255, 0.35);
+  border-color: rgba(0, 170, 255, 0.55);
+}
+
+.btn-danger {
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 90, 90, 0.35);
+  background: rgba(255, 90, 90, 0.18);
+  color: rgba(255, 255, 255, 0.92);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: rgba(255, 90, 90, 0.28);
+  border-color: rgba(255, 90, 90, 0.65);
+}
+
+.btn-danger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .uploadRow {

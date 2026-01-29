@@ -98,6 +98,7 @@ export function UploadButton({ onUploaded, defaultAlbum }: { onUploaded: () => v
 
     try {
       setBusy(true);
+      let anyUploaded = false;
 
       // Upload files sequentially
       for (let i = 0; i < files.length; i++) {
@@ -129,6 +130,7 @@ export function UploadButton({ onUploaded, defaultAlbum }: { onUploaded: () => v
           presign.required_headers["content-type"]
         );
 
+        setStatus(`Finalizing ${i + 1} of ${files.length}…`);
         await completeUpload({
           media_id: presign.media_id,
           object_key: presign.object_key,
@@ -137,10 +139,16 @@ export function UploadButton({ onUploaded, defaultAlbum }: { onUploaded: () => v
           size_bytes: file.size,
           album_name: (album.trim() || (defaultAlbum || "").trim()) || undefined,
         });
+
+        anyUploaded = true;
       }
 
-      onUploaded();
+      setStatus(null);
+      if (anyUploaded) {
+        onUploaded();
+      }
     } catch (ex: any) {
+      console.error("Upload error:", ex);
       setErr(ex?.message || "Upload failed");
     } finally {
       setBusy(false);

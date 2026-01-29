@@ -27,9 +27,10 @@ export function PreviewModal({
   onClose,
 }: Props) {
   const [url, setUrl] = useState<string>("");
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const currentItem = items[currentIndex];
   const hasPrev = currentIndex > 0;
@@ -42,25 +43,28 @@ export function PreviewModal({
     async function loadUrl() {
       if (!currentItem) {
         setUrl("");
+        setIsLoading(false);
         return;
       }
       
+      setIsLoading(true);
+      setUrl(""); // Clear old URL immediately to prevent flash
+      
       try {
-        setLoading(true);
         const { download_url } = await presignDownload(currentItem.media_id);
         setUrl(download_url);
       } catch (ex) {
         console.error("Failed to load media", ex);
         setUrl("");
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     }
 
     if (open && currentItem) {
       loadUrl();
     }
-  }, [open, currentItem]);
+  }, [open, currentItem?.media_id]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -96,6 +100,20 @@ export function PreviewModal({
     }
   };
 
+  async function handleDownload() {
+    if (!currentItem || !url) return;
+    
+    try {
+      setDownloadingId(currentItem.media_id);
+      // Open the presigned URL directly - browser will download it
+      window.open(url, "_blank");
+    } catch (err) {
+      console.error("Download failed", err);
+    } finally {
+      setDownloadingId(null);
+    }
+  }
+
   if (!open || !currentItem) return null;
 
   return (
@@ -120,15 +138,46 @@ export function PreviewModal({
         </div>
 
         <div className="modalBody" style={{ position: "relative" }}>
-          {loading ? (
-            <div style={{ padding: 40, textAlign: "center" }}>Loading…</div>
-          ) : isVideo(currentItem.content_type) ? (
-            <video className="modalMedia" controls playsInline src={url} />
+          {isLoading ? (
+            <div style={{ 
+              display: "flex", 
+              alignItems: "center", 
+              justifyContent: "center",
+              minHeight: 400,
+              background: "rgba(0,0,0,0.05)",
+              borderRadius: 4
+            }}>
+              <div className="skeleton-pulse" style={{
+                width: "100%",
+                height: 400,
+                borderRadius: 4
+              }} />
+            </div>
+          ) : url ? (
+            isVideo(currentItem.content_type) ? (
+              <video 
+                key={`video-${currentItem.media_id}`}
+                className="modalMedia" 
+                controls 
+                playsInline 
+                src={url} 
+              />
+            ) : (
+              <img className="modalMedia" alt={currentItem.filename} src={url} />
+            )
           ) : (
-            <img className="modalMedia" alt={currentItem.filename} src={url} />
+            <div style={{ 
+              display: "flex", 
+              alignItems: "center", 
+              justifyContent: "center",
+              minHeight: 400,
+              color: "#666"
+            }}>
+              Failed to load media
+            </div>
           )}
           
-          {!loading && hasPrev && (
+          {hasPrev && (
             <button
               className="carouselBtn carouselBtnPrev"
               onClick={(e) => { e.stopPropagation(); onNavigate(-1); }}
@@ -138,7 +187,7 @@ export function PreviewModal({
             </button>
           )}
           
-          {!loading && hasNext && (
+          {hasNext && (
             <button
               className="carouselBtn carouselBtnNext"
               onClick={(e) => { e.stopPropagation(); onNavigate(1); }}
@@ -153,13 +202,17 @@ export function PreviewModal({
           <div className="muted" style={{ fontSize: 12 }}>{currentItem.content_type}</div>
           <div className="row" style={{ gap: 10 }}>
             {canDelete && onDelete ? (
-              <button className="btn danger" onClick={onDelete} disabled={!!deleting}>
+              <button className="btn btn-danger" onClick={onDelete} disabled={!!deleting || isLoading}>
                 {deleting ? "Deleting…" : "Delete"}
               </button>
             ) : null}
-            <a className="btn primary" href={url} download>
-              Download
-            </a>
+            <button 
+              className="btn btn-primary" 
+              onClick={handleDownload}
+              disabled={!url || downloadingId === currentItem.media_id || isLoading}
+            >
+              {isLoading ? "Loading…" : downloadingId === currentItem.media_id ? "Downloading…" : "Download"}
+            </button>
           </div>
         </div>
       </div>

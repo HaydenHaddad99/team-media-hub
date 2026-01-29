@@ -35,7 +35,7 @@ def query_gsi(table_name: str, index_name: str, key_condition, limit: int = 1) -
     return items[0] if items else None
 
 def query_media_items(table_name: str, team_id: str, limit: int = 30, cursor: Optional[str] = None) -> Tuple[list, Optional[str]]:
-    """Query media items for a team with pagination."""
+    """Query media items for a team with pagination (newest first)."""
     import json
     
     eks = None
@@ -45,7 +45,14 @@ def query_media_items(table_name: str, team_id: str, limit: int = 30, cursor: Op
         except Exception:
             eks = None
     
-    items, lek = query(table_name, Key("team_id").eq(team_id), limit=limit, exclusive_start_key=eks)
+    # Query with newest first by using ScanIndexForward=False
+    kwargs = {"KeyConditionExpression": Key("team_id").eq(team_id), "Limit": limit, "ScanIndexForward": False}
+    if eks:
+        kwargs["ExclusiveStartKey"] = eks
+    resp = table(table_name).query(**kwargs)
+    items = [_normalize(i) for i in resp.get("Items", [])]
+    lek = resp.get("LastEvaluatedKey")
+    
     next_cursor = json.dumps(lek) if lek else None
     return items, next_cursor
 

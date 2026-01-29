@@ -6,12 +6,16 @@ import {
   clearStoredToken,
   getDemoInvite,
 } from "../lib/api";
+import { SetupKeyPrompt } from "../components/SetupKeyPrompt";
+import { CreateTeamForm } from "../components/CreateTeamForm";
 
 export function Landing({ onReady }: { onReady: () => void }) {
   const [token, setToken] = useState("");
   const [showManual, setShowManual] = useState(false);
   const [demoBusy, setDemoBusy] = useState(false);
   const [demoErr, setDemoErr] = useState("");
+  const [setupKey, setSetupKey] = useState<string>(() => localStorage.getItem("tmh_setup_key") || "");
+  const [showCreateTeam, setShowCreateTeam] = useState(false);
 
   useEffect(() => {
     const urlToken = getTokenFromUrl();
@@ -117,6 +121,25 @@ export function Landing({ onReady }: { onReady: () => void }) {
             </button>
           </div>
         ) : null}
+
+        {setupKey ? (
+          <>
+            {showCreateTeam && <CreateTeamForm setupKey={setupKey} onCreated={(inviteToken) => {
+              setStoredToken(inviteToken);
+              onReady();
+            }} />}
+            {!showCreateTeam && (
+              <button className="btn" onClick={() => setShowCreateTeam(true)} style={{ marginTop: 14 }}>
+                Create Team
+              </button>
+            )}
+          </>
+        ) : (
+          <SetupKeyPrompt onSubmit={(key) => {
+            localStorage.setItem("tmh_setup_key", key);
+            setSetupKey(key);
+          }} />
+        )}
       </div>
 
       <footer className="footer muted">

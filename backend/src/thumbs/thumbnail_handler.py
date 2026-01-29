@@ -2,7 +2,11 @@ import io
 import os
 import re
 import boto3
+import logging
 from PIL import Image
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 DDB_TABLE = os.environ["TABLE_MEDIA"]
 BUCKET = os.environ["MEDIA_BUCKET"]
@@ -97,8 +101,9 @@ def handler(event, context):
         try:
             raw = s3.get_object(Bucket=bucket, Key=key)["Body"].read()
             thumb_bytes = _make_thumb(raw)
-        except Exception:
+        except Exception as e:
             # Skip thumbnail creation for unsupported formats (e.g., HEIC without libheif)
+            logger.warning(f"Failed to generate thumbnail for {key}: {str(e)}")
             continue
 
         thumb_key = f"thumbnails/{parsed['team_id']}/{parsed['media_id']}/thumb.jpg"

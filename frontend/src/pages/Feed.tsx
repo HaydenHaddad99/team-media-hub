@@ -7,7 +7,9 @@ import { AdminInvites } from "../components/AdminInvites";
 export function Feed({ onLogout }: { onLogout: () => void }) {
   const [items, setItems] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [albumFilter, setAlbumFilter] = useState<string>("all");
   const [selectMode, setSelectMode] = useState<boolean>(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -44,6 +46,7 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
       setLoading(true);
       const res = await listMedia({ limit: 30 });
       setItems(res.items || []);
+      setNextCursor(res.next_cursor || null);
     } catch (ex: any) {
       setErr(ex?.message || "Failed to load media");
     } finally {
@@ -51,11 +54,33 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
     }
   }
 
+  async function loadMore() {
+    if (!nextCursor || loadingMore) return;
+    try {
+      setErr(null);
+      setLoadingMore(true);
+      const res = await listMedia({ limit: 30, cursor: nextCursor });
+      setItems(prev => [...prev, ...(res.items || [])]);
+      setNextCursor(res.next_cursor || null);
+    } catch (ex: any) {
+      setErr(ex?.message || "Failed to load more media");
+    } finally {
+      setLoadingMore(false);
+    }
+  }
+
+  async function handleUploadComplete() {
+    // After upload, switch to "All albums" view so users can see new uploads
+    setAlbumFilter("all");
+    await refresh();
+  }
+
   // Silent refresh used for thumbnail polling to avoid UI flicker
   async function pollRefresh() {
     try {
       const res = await listMedia({ limit: 30 });
       setItems(res.items || []);
+      setNextCursor(res.next_cursor || null);
     } catch (ex: any) {
       // ignore transient errors during polling
     }
@@ -145,10 +170,10 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
     const interval = window.setInterval(() => {
       attempts += 1;
       pollRefresh();
-      if (attempts >= 10) {
+      if (attempts >= 6) {  // Reduced from 10 to 6 attempts
         window.clearInterval(interval);
       }
-    }, 3000);
+    }, 5000);  // Increased from 3000 to 5000ms (5 seconds)
 
     return () => {
       window.clearInterval(interval);
@@ -180,7 +205,7 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
         <div className="rowBetween" style={{ flexWrap: "wrap", gap: 12 }}>
           <h2 style={{ margin: 0 }}>Uploads</h2>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-            {albums.length > 1 && (
+            {(albums.length > 1 || (canUpload && items.length > 0)) && (
               <select 
                 className="input" 
                 value={albumFilter} 
@@ -206,7 +231,7 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
         </div>
 
         {canUpload ? (
-          <UploadButton onUploaded={refresh} defaultAlbum={albumFilter === "all" ? "" : albumFilter} />
+          <UploadButton onUploaded={handleUploadComplete} defaultAlbum={albumFilter === "all" ? "" : albumFilter} />
         ) : (
           <div className="muted" style={{ marginTop: 10 }}>
             You can view and download media. Ask the team admin for an uploader link if you need to upload.
@@ -245,15 +270,28 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
         ) : filteredItems.length === 0 ? (
           <div className="muted">No uploads yet. Share the uploader link to start collecting photos from parents.</div>
         ) : (
-          <MediaGrid
-            items={filteredItems}
-            loading={false}
-            canDelete={canUpload}
-            onDeleted={refresh}
-            selectMode={selectMode}
-            selectedIds={selectedIds}
-            onToggleSelect={toggleSelect}
-          />
+          <>
+            <MediaGrid
+              items={filteredItems}
+              loading={false}
+              canDelete={canUpload}
+              onDeleted={refresh}
+              selectMode={selectMode}
+              selectedIds={selectedIds}
+              onToggleSelect={toggleSelect}
+            />
+            {nextCursor && albumFilter === "all" ? (
+              <div style={{ display: "flex", justifyContent: "center", marginTop: 20 }}>
+                <button 
+                  className="btn secondary" 
+                  onClick={loadMore} 
+                  disabled={loadingMore}
+                >
+                  {loadingMore ? "Loading..." : "Load more"}
+                </button>
+              </div>
+            ) : null}
+          </>
         )}
 
         {isAdmin && teamId ? <AdminInvites teamId={teamId} /> : null}
