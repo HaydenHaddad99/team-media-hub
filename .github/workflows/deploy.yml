@@ -39,6 +39,8 @@ jobs:
           node-version: "20"
       
       - name: Build frontend
+        env:
+          VITE_API_BASE_URL: https://5gt1117eh5.execute-api.us-east-1.amazonaws.com
         run: |
           cd frontend
           npm install
