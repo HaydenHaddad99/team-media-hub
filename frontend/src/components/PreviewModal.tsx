@@ -205,43 +205,40 @@ export function PreviewModal({
           </div>
         </div>
 
-        <div className="modalBody" style={{ position: "relative" }}>
-          {/* Show thumbnail as placeholder while full-res loads */}
-          {!isVideo(currentItem.content_type) && currentItem.thumb_url && (url && !mediaLoaded) && (
+        <div className="modalBody" style={{ position: "relative", minHeight: 400, display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.6) 100%)" }}>
+          {/* Base layer: Always show thumbnail immediately for images */}
+          {!isVideo(currentItem.content_type) && currentItem.thumb_url && (
             <img 
               className="modalMedia modalMedia-placeholder"
-              alt={currentItem.filename} 
+              alt="" 
               src={currentItem.thumb_url}
               style={{
-                filter: "blur(8px)",
-                transform: "scale(1.05)"
+                position: "absolute",
+                filter: "blur(10px)",
+                transform: "scale(1.1)",
+                opacity: 0.7
               }}
             />
           )}
           
-          {/* Show skeleton only if no thumbnail available */}
-          {(isLoading || (url && !mediaLoaded)) && (!currentItem.thumb_url || isVideo(currentItem.content_type)) && (
-            <div style={{ 
-              display: "flex", 
-              alignItems: "center", 
-              justifyContent: "center",
-              minHeight: 400,
-              background: "rgba(0,0,0,0.05)",
-              borderRadius: 4,
-              position: url ? "absolute" : "relative",
-              top: 0,
-              left: 0,
-              right: 0,
-              zIndex: 1
+          {/* Loading spinner (subtle, centered) */}
+          {(isLoading || (url && !mediaLoaded)) && (
+            <div style={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              zIndex: 2,
+              textAlign: "center"
             }}>
-              <div className="skeleton-pulse" style={{
-                width: "100%",
-                height: 400,
-                borderRadius: 4
-              }} />
+              <div className="spinner" />
+              <div style={{ marginTop: 12, fontSize: 13, color: "rgba(255,255,255,0.7)" }}>
+                Loading…
+              </div>
             </div>
           )}
           
+          {/* Full-res media (fades in when loaded) */}
           {url && (
             isVideo(currentItem.content_type) ? (
               <video 
@@ -251,25 +248,25 @@ export function PreviewModal({
                 playsInline 
                 src={url}
                 onLoadedData={() => setMediaLoaded(true)}
+                style={{ position: "relative", zIndex: 1 }}
               />
             ) : (
               <img 
                 key={`img-${currentItem.media_id}`}
                 className={`modalMedia ${mediaLoaded ? 'modalMedia-loaded' : ''}`}
-                alt={currentItem.filename} 
+                alt="" 
                 src={url}
                 onLoad={() => setMediaLoaded(true)}
+                style={{ position: "relative", zIndex: 1 }}
               />
             )
           )}
           
+          {/* Error state */}
           {!isLoading && !url && (
             <div style={{ 
-              display: "flex", 
-              alignItems: "center", 
-              justifyContent: "center",
-              minHeight: 400,
-              color: "#666"
+              color: "rgba(255,255,255,0.6)",
+              fontSize: 14
             }}>
               Failed to load media
             </div>
