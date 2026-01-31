@@ -93,7 +93,10 @@ export function Landing({ onReady }: { onReady: () => void }) {
         <div style={{ marginTop: 14 }}>
           <button 
             className="btn secondary" 
-            onClick={() => window.history.pushState({}, "", "/join") && window.dispatchEvent(new PopStateEvent("popstate"))}
+            onClick={() => {
+              window.history.pushState({}, "", "/join");
+              window.dispatchEvent(new PopStateEvent("popstate"));
+            }}
             style={{ marginRight: 8 }}
           >
             Join with Team Code
