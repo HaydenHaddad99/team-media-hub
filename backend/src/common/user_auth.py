@@ -8,7 +8,7 @@ import secrets
 import hashlib
 import time
 from typing import Tuple, Optional
-from common.config import TABLE_USERS, TABLE_AUTH_CODES, TABLE_TEAM_MEMBERS
+from common.config import TABLE_USERS, TABLE_AUTH_CODES, TABLE_TEAM_MEMBERS, AWS_REGION, SES_FROM_EMAIL, FRONTEND_BASE_URL
 from common.db import get_item, put_item, query_items
 
 def generate_user_id() -> str:
@@ -130,22 +130,31 @@ def get_team_members(team_id: str) -> list[dict]:
 def send_magic_link_email(email: str, code: str, team_name: str = "") -> None:
     """
     Send verification code via email (AWS SES).
-    
-    TODO: Implement with AWS SES
-    For now, just log the code (dev mode).
     """
-    print(f"[MAGIC LINK] Email: {email}, Code: {code}, Team: {team_name}")
-    
-    # Production implementation:
-    # import boto3
-    # ses = boto3.client('ses')
-    # ses.send_email(
-    #     Source='noreply@yourdomain.com',
-    #     Destination={'ToAddresses': [email]},
-    #     Message={
-    #         'Subject': {'Data': f'Join {team_name} - Verification Code'},
-    #         'Body': {
-    #             'Text': {'Data': f'Your verification code is: {code}\n\nThis code expires in 10 minutes.'}
-    #         }
-    #     }
-    # )
+    if not SES_FROM_EMAIL:
+        print(f"[MAGIC LINK] SES not configured. Email: {email}, Code: {code}, Team: {team_name}")
+        return
+
+    import boto3
+
+    subject_team = f" {team_name}" if team_name else ""
+    subject = f"Your Team Media Hub code{subject_team}".strip()
+    join_url = f"{FRONTEND_BASE_URL}/join" if FRONTEND_BASE_URL else ""
+
+    body_lines = [
+        f"Your verification code is: {code}",
+        "",
+        "This code expires in 10 minutes.",
+    ]
+    if join_url:
+        body_lines.extend(["", f"Join here: {join_url}"])
+
+    ses = boto3.client("ses", region_name=AWS_REGION)
+    ses.send_email(
+        Source=SES_FROM_EMAIL,
+        Destination={"ToAddresses": [email]},
+        Message={
+            "Subject": {"Data": subject},
+            "Body": {"Text": {"Data": "\n".join(body_lines)}},
+        },
+    )

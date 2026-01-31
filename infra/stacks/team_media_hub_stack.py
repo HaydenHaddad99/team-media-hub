@@ -53,6 +53,14 @@ class TeamMediaHubStack(Stack):
             description="TTL in days for demo invite tokens"
         )
 
+        ses_from_email = CfnParameter(
+            self,
+            "SesFromEmail",
+            type="String",
+            default="",
+            description="Verified SES From email address (leave blank to log codes only)"
+        )
+
         # -------------------------
         # Media Storage (private)
         # -------------------------
@@ -202,6 +210,7 @@ class TeamMediaHubStack(Stack):
                 "DEMO_ENABLED": demo_enabled.value_as_string,
                 "DEMO_TEAM_ID": demo_team_id.value_as_string,
                 "DEMO_INVITE_TTL_DAYS": demo_invite_ttl_days.value_as_string,
+                "SES_FROM_EMAIL": ses_from_email.value_as_string,
                 # FRONTEND_BASE_URL will be set after we create CloudFront distribution
             },
         )
@@ -220,6 +229,11 @@ class TeamMediaHubStack(Stack):
                 media_bucket.arn_for_objects("media/*"),
                 media_bucket.arn_for_objects("thumbnails/*"),  # Allow API to fetch thumbnails
             ],
+        ))
+
+        api_fn.add_to_role_policy(iam.PolicyStatement(
+            actions=["ses:SendEmail", "ses:SendRawEmail"],
+            resources=["*"]
         ))
 
         http_api = apigwv2.HttpApi(

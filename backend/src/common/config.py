@@ -14,6 +14,8 @@ MEDIA_BUCKET = os.getenv("MEDIA_BUCKET", "")
 
 FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "").rstrip("/")
 
+SES_FROM_EMAIL = os.getenv("SES_FROM_EMAIL", "").strip()
+
 SETUP_KEY = os.getenv("SETUP_KEY", "")  # Required to create teams; empty string disables check (dev only)
 
 SIGNED_URL_TTL_SECONDS = int(os.getenv("SIGNED_URL_TTL_SECONDS", "900"))  # 15 min default
