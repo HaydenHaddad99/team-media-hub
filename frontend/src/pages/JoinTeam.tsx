@@ -16,9 +16,12 @@ export function JoinTeam() {
     setLoading(true);
 
     try {
-      const res = await request("POST", "/auth/join-team", {
-        email: email.trim().toLowerCase(),
-        team_code: teamCode.trim().toUpperCase(),
+      const res = await request<{team_name: string}>("/auth/join-team", {
+        method: "POST",
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          team_code: teamCode.trim().toUpperCase(),
+        }),
       });
 
       setTeamName(res.team_name || "Team");
@@ -36,10 +39,13 @@ export function JoinTeam() {
     setLoading(true);
 
     try {
-      const res = await request("POST", "/auth/verify", {
-        email: email.trim().toLowerCase(),
-        code: verificationCode.trim(),
-        team_code: teamCode.trim().toUpperCase(),
+      const res = await request<{session_token: string; team_id: string}>("/auth/verify", {
+        method: "POST",
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          code: verificationCode.trim(),
+          team_code: teamCode.trim().toUpperCase(),
+        }),
       });
 
       // Store session
