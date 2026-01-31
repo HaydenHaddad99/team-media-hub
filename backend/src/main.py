@@ -13,6 +13,8 @@ from handlers.media_complete import handle_media_complete
 from handlers.media_presign_download import handle_media_presign_download
 from handlers.media_thumbnail import handle_media_thumbnail
 from handlers.media_delete import handle_media_delete
+from handlers.auth_join_team import handle_auth_join_team
+from handlers.auth_verify import handle_auth_verify
 
 def _route(event: Dict) -> Tuple[str, str]:
     rc = (event.get("requestContext") or {})
@@ -55,6 +57,12 @@ def handler(event: Dict, context: Any) -> Dict:
         if method == "POST" and path == "/invites":
             body = _json_body(event)
             return handle_invites_create(event, body)
+        
+        if method == "POST" and path == "/auth/join-team":
+            return handle_auth_join_team(event)
+        
+        if method == "POST" and path == "/auth/verify":
+            return handle_auth_verify(event)
 
         if method == "GET" and path == "/media/thumbnail":
             return handle_media_thumbnail(event)

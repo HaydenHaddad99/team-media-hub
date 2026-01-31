@@ -91,6 +91,13 @@ export function Landing({ onReady }: { onReady: () => void }) {
         </div>
 
         <div style={{ marginTop: 14 }}>
+          <button 
+            className="btn secondary" 
+            onClick={() => window.history.pushState({}, "", "/join") && window.dispatchEvent(new PopStateEvent("popstate"))}
+            style={{ marginRight: 8 }}
+          >
+            Join with Team Code
+          </button>
           <button className="btn" onClick={() => setShowManual(!showManual)}>
             {showManual ? "Hide" : "Have a token? Paste it"}
           </button>

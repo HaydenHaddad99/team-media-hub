@@ -34,6 +34,37 @@ def query_gsi(table_name: str, index_name: str, key_condition, limit: int = 1) -
     items = [_normalize(i) for i in resp.get("Items", [])]
     return items[0] if items else None
 
+def query_items(table_name: str, key_condition: str = None, expression_values: dict = None, index_name: str = None, limit: int = 50) -> Tuple[list, None]:
+    """
+    Generic query helper with support for expression attribute values and GSI.
+    
+    Example:
+        query_items(TABLE_USERS, key_condition="email = :email", 
+                   expression_values={":email": "user@example.com"}, 
+                   index_name="email-index")
+    """
+    kwargs = {"Limit": limit}
+    
+    if key_condition and expression_values:
+        # Build KeyConditionExpression from string
+        # This is a simplified version - for production use boto3.dynamodb.conditions
+        from boto3.dynamodb.conditions import Key, Attr
+        # Parse simple conditions like "email = :email" or "user_id = :uid"
+        parts = key_condition.replace("=", " = ").split()
+        if len(parts) >= 3:
+            attr_name = parts[0]
+            placeholder = parts[2]
+            if placeholder.startswith(":"):
+                value = expression_values.get(placeholder)
+                kwargs["KeyConditionExpression"] = Key(attr_name).eq(value)
+    
+    if index_name:
+        kwargs["IndexName"] = index_name
+    
+    resp = table(table_name).query(**kwargs)
+    items = [_normalize(i) for i in resp.get("Items", [])]
+    return items, None
+
 def query_media_items(table_name: str, team_id: str, limit: int = 30, cursor: Optional[str] = None) -> Tuple[list, Optional[str]]:
     """Query media items for a team with pagination (newest first)."""
     import json

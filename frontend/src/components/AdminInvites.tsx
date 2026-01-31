@@ -3,9 +3,10 @@ import { createInvite } from "../lib/api";
 
 type Props = {
   teamId: string;
+  teamCode?: string | null;
 };
 
-export function AdminInvites({ teamId }: Props) {
+export function AdminInvites({ teamId, teamCode }: Props) {
   const [expiresInDays, setExpiresInDays] = useState<number>(30);
   const [busy, setBusy] = useState<"viewer" | "uploader" | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -50,6 +51,26 @@ export function AdminInvites({ teamId }: Props) {
 
   return (
     <div style={{ marginTop: 14 }}>
+      {teamCode ? (
+        <div className="panel" style={{ marginBottom: 12 }}>
+          <div className="muted" style={{ marginBottom: 6 }}>
+            Team code (share with parents)
+          </div>
+          <div className="row" style={{ gap: 10, alignItems: "stretch" }}>
+            <input className="input" value={teamCode} readOnly />
+            <button className="btn primary" onClick={() => copy(teamCode)}>
+              {copied ? "Copied!" : "Copy"}
+            </button>
+          </div>
+          <div className="muted" style={{ marginTop: 8, fontSize: 12 }}>
+            Parents can join at /join using this code.
+          </div>
+        </div>
+      ) : (
+        <div className="muted" style={{ marginBottom: 12 }}>
+          Team code not available for this team. (Teams created before the update may not have one.)
+        </div>
+      )}
       <div className="rowBetween">
         <h2 style={{ margin: 0 }}>Invite Links</h2>
         <div className="row" style={{ gap: 8 }}>

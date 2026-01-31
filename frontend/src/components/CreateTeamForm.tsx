@@ -4,6 +4,7 @@ export function CreateTeamForm({ setupKey, onCreated }: { setupKey: string; onCr
   const [teamName, setTeamName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [createdTeam, setCreatedTeam] = useState<{token: string, teamCode: string, teamName: string} | null>(null);
 
   async function handleCreate() {
     const name = teamName.trim();
@@ -35,12 +36,48 @@ export function CreateTeamForm({ setupKey, onCreated }: { setupKey: string; onCr
         return;
       }
 
-      onCreated(json.admin_invite_token);
+      setCreatedTeam({
+        token: json.admin_invite_token,
+        teamCode: json.team_code,
+        teamName: json.team_name
+      });
     } catch (err: any) {
       setError(err?.message || "Failed to create team");
     } finally {
       setLoading(false);
     }
+  }
+  
+  if (createdTeam) {
+    return (
+      <div style={{ marginTop: 16, padding: "20px", backgroundColor: "rgba(0,200,100,0.08)", borderRadius: "8px", border: "1px solid rgba(0,200,100,0.3)" }}>
+        <h3 style={{ marginTop: 0, color: "#0a8" }}>✓ Team Created!</h3>
+        
+        <div style={{ marginBottom: 20 }}>
+          <strong>Team Name:</strong> {createdTeam.teamName}
+        </div>
+        
+        <div style={{ marginBottom: 20, padding: 16, background: "rgba(0,0,0,0.3)", borderRadius: 8 }}>
+          <div style={{ marginBottom: 8, fontSize: 14, color: "#aaa" }}>
+            <strong>Team Code</strong> (share with parents):
+          </div>
+          <div style={{ fontSize: 24, fontFamily: "monospace", letterSpacing: 2, fontWeight: "bold" }}>
+            {createdTeam.teamCode}
+          </div>
+          <div style={{ marginTop: 8, fontSize: 13, color: "#888" }}>
+            Parents use this code at <strong>/join</strong> to create accounts
+          </div>
+        </div>
+        
+        <button 
+          className="btn primary" 
+          onClick={() => onCreated(createdTeam.token)}
+          style={{ width: "100%" }}
+        >
+          Continue as Admin
+        </button>
+      </div>
+    );
   }
 
   return (

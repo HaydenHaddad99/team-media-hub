@@ -188,6 +188,11 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
           <div className="sub">
             Media feed · role: <b>{role}</b>
           </div>
+          {isAdmin && me?.team?.team_code ? (
+            <div className="sub" style={{ marginTop: 6 }}>
+              Team code: <b>{me.team.team_code}</b>
+            </div>
+          ) : null}
           {meErr ? <div className="error">{meErr}</div> : null}
         </div>
         <button
@@ -294,7 +299,7 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
           </>
         )}
 
-        {isAdmin && teamId ? <AdminInvites teamId={teamId} /> : null}
+        {isAdmin && teamId ? <AdminInvites teamId={teamId} teamCode={me?.team?.team_code} /> : null}
       </div>
 
       {selectMode && selectedIds.size > 0 ? (

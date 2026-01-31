@@ -29,6 +29,19 @@ def handle_media_delete(event):
     team_id = item["team_id"]
     if team_id != invite["team_id"]:
         return err("Not authorized.", 403, code="forbidden")
+    
+    # Ownership check: admin can delete anything, uploader can only delete own uploads
+    if role == "uploader":
+        uploader_user_id = item.get("uploader_user_id")
+        current_user_id = invite.get("user_id")
+        
+        # If this upload has an owner and it's not the current user, deny
+        if uploader_user_id and uploader_user_id != current_user_id:
+            return err("You can only delete your own uploads.", 403, code="forbidden")
+        
+        # If upload has no owner (old uploads before accounts), only admin can delete
+        if not uploader_user_id:
+            return err("Only admins can delete legacy uploads.", 403, code="forbidden")
 
     object_key = item.get("object_key")
     thumb_key = item.get("thumb_key")

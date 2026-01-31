@@ -51,6 +51,13 @@ def handle_media_complete(event, body):
         "gsi1pk": media_id,
         "gsi1sk": f"{ts}",
     }
+    
+    # Store uploader_user_id if available (account-based uploads)
+    user_id = invite.get("user_id")
+    if user_id:
+        item["uploader_user_id"] = user_id
+        item["uploader_email"] = invite.get("email")
+    
     put_item(TABLE_MEDIA, item)
 
     write_audit(team_id, "media_complete", invite_token=invite.get("_raw_token"), meta={"media_id": media_id, "album_name": album_name})

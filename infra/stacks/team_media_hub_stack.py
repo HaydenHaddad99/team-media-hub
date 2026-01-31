@@ -90,6 +90,13 @@ class TeamMediaHubStack(Stack):
             billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
             removal_policy=RemovalPolicy.DESTROY,
         )
+        
+        # GSI for team code lookup
+        teams_table.add_global_secondary_index(
+            index_name="team-code-index",
+            partition_key=dynamodb.Attribute(name="team_code", type=dynamodb.AttributeType.STRING),
+            projection_type=dynamodb.ProjectionType.ALL,
+        )
 
         invites_table = dynamodb.Table(
             self,
@@ -124,6 +131,50 @@ class TeamMediaHubStack(Stack):
             removal_policy=RemovalPolicy.DESTROY,
         )
 
+        # Users table (account-lite system)
+        users_table = dynamodb.Table(
+            self,
+            "UsersTable",
+            partition_key=dynamodb.Attribute(name="user_id", type=dynamodb.AttributeType.STRING),
+            billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
+            removal_policy=RemovalPolicy.DESTROY,
+        )
+        
+        # GSI for email lookup
+        users_table.add_global_secondary_index(
+            index_name="email-index",
+            partition_key=dynamodb.Attribute(name="email", type=dynamodb.AttributeType.STRING),
+            projection_type=dynamodb.ProjectionType.ALL,
+        )
+
+        # Team members table (user-team relationships)
+        team_members_table = dynamodb.Table(
+            self,
+            "TeamMembersTable",
+            partition_key=dynamodb.Attribute(name="user_id", type=dynamodb.AttributeType.STRING),
+            sort_key=dynamodb.Attribute(name="team_id", type=dynamodb.AttributeType.STRING),
+            billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
+            removal_policy=RemovalPolicy.DESTROY,
+        )
+        
+        # GSI for team -> members lookup
+        team_members_table.add_global_secondary_index(
+            index_name="team-index",
+            partition_key=dynamodb.Attribute(name="team_id", type=dynamodb.AttributeType.STRING),
+            sort_key=dynamodb.Attribute(name="user_id", type=dynamodb.AttributeType.STRING),
+            projection_type=dynamodb.ProjectionType.ALL,
+        )
+
+        # Magic link verification codes table
+        auth_codes_table = dynamodb.Table(
+            self,
+            "AuthCodesTable",
+            partition_key=dynamodb.Attribute(name="code_hash", type=dynamodb.AttributeType.STRING),
+            billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
+            removal_policy=RemovalPolicy.DESTROY,
+            time_to_live_attribute="expires_at",
+        )
+
         # -------------------------
         # Backend: Lambda + HTTP API
         # -------------------------
@@ -141,6 +192,9 @@ class TeamMediaHubStack(Stack):
                 "TABLE_INVITES": invites_table.table_name,
                 "TABLE_MEDIA": media_table.table_name,
                 "TABLE_AUDIT": audit_table.table_name,
+                "TABLE_USERS": users_table.table_name,
+                "TABLE_TEAM_MEMBERS": team_members_table.table_name,
+                "TABLE_AUTH_CODES": auth_codes_table.table_name,
                 "SIGNED_URL_TTL_SECONDS": "900",
                 "MAX_UPLOAD_BYTES": str(300 * 1024 * 1024),
                 "ALLOWED_CONTENT_TYPES": "image/jpeg,image/png,image/heic,video/mp4,video/quicktime",
@@ -156,6 +210,9 @@ class TeamMediaHubStack(Stack):
         invites_table.grant_read_write_data(api_fn)
         media_table.grant_read_write_data(api_fn)
         audit_table.grant_read_write_data(api_fn)
+        users_table.grant_read_write_data(api_fn)
+        team_members_table.grant_read_write_data(api_fn)
+        auth_codes_table.grant_read_write_data(api_fn)
 
         api_fn.add_to_role_policy(iam.PolicyStatement(
             actions=["s3:PutObject", "s3:GetObject", "s3:HeadObject", "s3:DeleteObject"],

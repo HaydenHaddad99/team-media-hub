@@ -23,6 +23,7 @@ def handle_me(event):
         "team": {
             "team_id": team_id,
             "team_name": team.get("team_name", "Team"),
+            "team_code": team.get("team_code"),
         },
         "invite": {
             "role": invite.get("role", "viewer"),

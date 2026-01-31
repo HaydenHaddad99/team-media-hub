@@ -22,7 +22,7 @@ export function requireApiBaseUrl() {
   }
 }
 
-async function request<T>(
+export async function request<T>(
   path: string,
   opts: RequestInit & { token?: string } = {}
 ): Promise<T> {
@@ -165,7 +165,7 @@ export function getCurrentToken(): string | null {
 }
 
 export type MeResponse = {
-  team: { team_id: string; team_name: string };
+  team: { team_id: string; team_name: string; team_code?: string | null };
   invite: { role: "viewer" | "uploader" | "admin"; expires_at?: number };
 };
 

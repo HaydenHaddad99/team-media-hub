@@ -8,6 +8,7 @@ from common.db import put_item
 from common.responses import ok, err
 from common.auth import token_hash
 from common.audit import write_audit
+from common.team_codes import generate_team_code
 
 def _now() -> int:
     return int(time.time())
@@ -26,10 +27,14 @@ def handle_teams_create(event, body):
 
     team_id = str(uuid.uuid4())
     ts = _now()
+    
+    # Generate team code
+    team_code = generate_team_code(team_name)
 
     put_item(TABLE_TEAMS, {
         "team_id": team_id,
         "team_name": team_name,
+        "team_code": team_code,
         "created_at": ts,
     })
 
@@ -50,6 +55,7 @@ def handle_teams_create(event, body):
     return ok({
         "team_id": team_id,
         "team_name": team_name,
+        "team_code": team_code,  # NEW: Parents use this to join
         "admin_invite_token": raw_token,  # Show once. Store securely client-side.
         "invite_url": invite_url,  # Shareable admin invite link
     }, 201)

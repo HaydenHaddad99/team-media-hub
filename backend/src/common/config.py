@@ -6,6 +6,9 @@ TABLE_TEAMS = os.getenv("TABLE_TEAMS", "")
 TABLE_INVITES = os.getenv("TABLE_INVITES", "")
 TABLE_MEDIA = os.getenv("TABLE_MEDIA", "")
 TABLE_AUDIT = os.getenv("TABLE_AUDIT", "")
+TABLE_USERS = os.getenv("TABLE_USERS", "")
+TABLE_TEAM_MEMBERS = os.getenv("TABLE_TEAM_MEMBERS", "")
+TABLE_AUTH_CODES = os.getenv("TABLE_AUTH_CODES", "")
 
 MEDIA_BUCKET = os.getenv("MEDIA_BUCKET", "")
 
