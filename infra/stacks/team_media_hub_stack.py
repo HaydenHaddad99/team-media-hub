@@ -198,7 +198,7 @@ class TeamMediaHubStack(Stack):
                 "SIGNED_URL_TTL_SECONDS": "900",
                 "MAX_UPLOAD_BYTES": str(300 * 1024 * 1024),
                 "ALLOWED_CONTENT_TYPES": "image/jpeg,image/png,image/heic,video/mp4,video/quicktime",
-                "SETUP_KEY": "my-secret-setup-key-12345",
+                "SETUP_KEY": os.getenv("SETUP_KEY", ""),
                 "DEMO_ENABLED": demo_enabled.value_as_string,
                 "DEMO_TEAM_ID": demo_team_id.value_as_string,
                 "DEMO_INVITE_TTL_DAYS": demo_invite_ttl_days.value_as_string,
