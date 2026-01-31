@@ -250,6 +250,8 @@ class TeamMediaHubStack(Stack):
             ("/teams", apigwv2.HttpMethod.POST),
             ("/invites", apigwv2.HttpMethod.POST),
             ("/invites/revoke", apigwv2.HttpMethod.POST),
+            ("/auth/join-team", apigwv2.HttpMethod.POST),
+            ("/auth/verify", apigwv2.HttpMethod.POST),
             ("/media", apigwv2.HttpMethod.GET),
             ("/media", apigwv2.HttpMethod.DELETE),
             ("/media/thumbnail", apigwv2.HttpMethod.GET),
