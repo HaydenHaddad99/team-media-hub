@@ -11,8 +11,9 @@ from typing import Optional, Dict
 from common.db import get_item, put_item, query_items
 from common.config import TABLE_TEAMS
 
-# Team code format: WORD-WORD-WORD (3-5 words, uppercase, hyphens)
-TEAM_CODE_RE = re.compile(r'^[A-Z0-9]{3,12}(-[A-Z0-9]{2,12}){1,3}$')
+# Team code format: WORD-WORD-WORD (2-4 words, uppercase, hyphens)
+# Allow 2-12 chars per word segment
+TEAM_CODE_RE = re.compile(r'^[A-Z0-9]{2,12}(-[A-Z0-9]{2,12}){1,3}$')
 
 def generate_team_code(team_name: str) -> str:
     """
