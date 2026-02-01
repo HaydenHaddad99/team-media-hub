@@ -25,15 +25,15 @@ def handle_auth_join_team(event, body=None):
         
         # Validate inputs
         if not email or "@" not in email:
-            return err("Invalid email address", status=400)
+            return err("Invalid email address", status_code=400)
         
         if not validate_team_code_format(team_code):
-            return err("Invalid team code format", status=400)
+            return err("Invalid team code format", status_code=400)
         
         # Check if team exists
         team = get_team_by_code(team_code)
         if not team:
-            return err("Team not found. Check your team code.", status=404)
+            return err("Team not found. Check your team code.", status_code=404)
         
         # Get or create user
         user = create_or_get_user(email)
@@ -55,4 +55,4 @@ def handle_auth_join_team(event, body=None):
         import traceback
         print(f"[ERROR] /auth/join-team: {str(e)}")
         traceback.print_exc()
-        return err("Server error", status=500)
+        return err("Server error", status_code=500)

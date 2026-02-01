@@ -36,17 +36,17 @@ def handle_auth_verify(event, body=None):
         
         # Validate inputs
         if not email or not code or not team_code:
-            return err("Missing required fields", status=400)
+            return err("Missing required fields", status_code=400)
         
         # Verify code
         valid, error_msg = verify_code(email, code)
         if not valid:
-            return err(error_msg or "Invalid code", status=401)
+            return err(error_msg or "Invalid code", status_code=401)
         
         # Get team
         team = get_team_by_code(team_code)
         if not team:
-            return err("Team not found", status=404)
+            return err("Team not found", status_code=404)
         
         team_id = team.get("team_id")
         
@@ -87,4 +87,4 @@ def handle_auth_verify(event, body=None):
         import traceback
         print(f"[ERROR] /auth/verify: {str(e)}")
         traceback.print_exc()
-        return err("Server error", status=500)
+        return err("Server error", status_code=500)
