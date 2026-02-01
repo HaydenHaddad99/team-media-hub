@@ -59,10 +59,12 @@ def handler(event: Dict, context: Any) -> Dict:
             return handle_invites_create(event, body)
         
         if method == "POST" and path == "/auth/join-team":
-            return handle_auth_join_team(event)
+            body = _json_body(event)
+            return handle_auth_join_team(event, body)
         
         if method == "POST" and path == "/auth/verify":
-            return handle_auth_verify(event)
+            body = _json_body(event)
+            return handle_auth_verify(event, body)
 
         if method == "GET" and path == "/media/thumbnail":
             return handle_media_thumbnail(event)
