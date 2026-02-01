@@ -273,7 +273,11 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
         ) : filteredItems.length === 0 && items.length > 0 ? (
           <div className="muted">No media in this album.</div>
         ) : filteredItems.length === 0 ? (
-          <div className="muted">No uploads yet. Share the uploader link to start collecting photos from parents.</div>
+          <div className="muted">
+            {canUpload
+              ? "No uploads yet. Start sharing by uploading your first photo or video."
+              : "No uploads yet. Share the uploader link to start collecting photos from parents."}
+          </div>
         ) : (
           <>
             <MediaGrid
