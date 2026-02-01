@@ -228,6 +228,7 @@ class TeamMediaHubStack(Stack):
             resources=[
                 media_bucket.arn_for_objects("media/*"),
                 media_bucket.arn_for_objects("thumbnails/*"),  # Allow API to fetch thumbnails
+                media_bucket.arn_for_objects("previews/*"),  # Allow API to fetch preview images
             ],
         ))
 
