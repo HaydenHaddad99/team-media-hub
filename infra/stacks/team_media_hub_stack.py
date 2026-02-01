@@ -304,6 +304,7 @@ class TeamMediaHubStack(Stack):
 
         media_bucket.grant_read(thumb_fn, "media/*")
         media_bucket.grant_put(thumb_fn, "thumbnails/*")
+        media_bucket.grant_put(thumb_fn, "previews/*")
         media_table.grant_read_write_data(thumb_fn)
 
         media_bucket.add_event_notification(
