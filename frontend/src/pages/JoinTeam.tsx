@@ -49,7 +49,7 @@ export function JoinTeam() {
       });
 
       // Store session
-      localStorage.setItem("invite_token", res.session_token);
+      localStorage.setItem("tmh_invite_token", res.session_token);
       localStorage.setItem("team_id", res.team_id);
 
       // Redirect to app
