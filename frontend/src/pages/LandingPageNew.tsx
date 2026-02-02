@@ -74,14 +74,6 @@ export function LandingPageNew({ onReady }: LandingPageNewProps) {
             >
               Sign in
             </button>
-            {" "}or{" "}
-            <button
-              type="button"
-              onClick={handleCreateTeamClick}
-              className="link-button"
-            >
-              Create a team
-            </button>
           </p>
         </div>
       </section>
