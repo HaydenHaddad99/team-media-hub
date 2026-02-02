@@ -33,9 +33,12 @@ def handle_coach_signin(event, body=None):
         # Store auth code in DynamoDB
         auth_codes_table = dynamodb.Table(os.getenv("TABLE_AUTH_CODES", "AuthCodesTable"))
         
+        # Hash the code for storage
+        code_hash = hashlib.sha256(code.encode()).hexdigest()
         expires_at = datetime.utcnow() + timedelta(minutes=10)
         
         auth_codes_table.put_item(Item={
+            "code_hash": code_hash,  # Partition key
             "email": email,
             "code": code,
             "code_type": "coach_signin",

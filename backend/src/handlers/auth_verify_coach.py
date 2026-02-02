@@ -29,14 +29,20 @@ def handle_verify_coach(event, body=None):
         # Verify auth code
         auth_codes_table = dynamodb.Table(os.getenv("TABLE_AUTH_CODES", "AuthCodesTable"))
         
+        # Hash the code for lookup
+        code_hash = hashlib.sha256(code.encode()).hexdigest()
+        
         response = auth_codes_table.get_item(Key={
-            "email": email,
-            "code": code,
+            "code_hash": code_hash,
         })
         
         auth_code = response.get("Item")
         if not auth_code:
             return err("Invalid code", status_code=400)
+        
+        # Verify email matches
+        if auth_code.get("email") != email:
+            return err("Email mismatch", status_code=400)
         
         # Check expiration
         expires_at = datetime.fromisoformat(auth_code.get("expires_at", ""))
@@ -49,7 +55,7 @@ def handle_verify_coach(event, body=None):
         
         # Mark code as used
         auth_codes_table.update_item(
-            Key={"email": email, "code": code},
+            Key={"code_hash": code_hash},
             UpdateExpression="SET #used = :val",
             ExpressionAttributeNames={"#used": "used"},
             ExpressionAttributeValues={":val": True},
