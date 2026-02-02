@@ -3,9 +3,12 @@ Get coach's teams: Coach provides user_token → return list of teams where they
 """
 import json
 import os
+import time
+import secrets
 from common.responses import ok, err
 from common.db import get_item
 from common.config import DYNAMODB
+from common.auth import token_hash
 
 dynamodb = DYNAMODB
 
@@ -47,6 +50,7 @@ def handle_get_coach_teams(event):
         
         # Get team details for each membership
         teams_table = dynamodb.Table(os.getenv("TABLE_TEAMS", "TeamsTable"))
+        invites_table = dynamodb.Table(os.getenv("TABLE_INVITES", "InvitesTable"))
         teams = []
         
         for membership in team_memberships:
@@ -63,14 +67,10 @@ def handle_get_coach_teams(event):
             
             if team:
                 # Try to get invite token from membership first (for coach-created teams)
-                # Otherwise query invites table
                 invite_token = membership.get("invite_token")
                 
                 if not invite_token:
-                    # Fallback: Get an invite token from invites table
-                    invites_table = dynamodb.Table(os.getenv("TABLE_INVITES", "InvitesTable"))
-                    
-                    # Scan invites table for admin token for this team (inefficient but works)
+                    # Fallback: scan for existing admin token
                     try:
                         invite_response = invites_table.scan(
                             FilterExpression="team_id = :tid AND #role = :role",
@@ -78,10 +78,20 @@ def handle_get_coach_teams(event):
                             ExpressionAttributeValues={":tid": team_id, ":role": "admin"},
                             Limit=1,
                         )
-                        invite = invite_response.get("Items", [None])[0]
-                        invite_token = invite.get("token") if invite else None
+                        # Note: InvitesTable stores token_hash, not the token itself
+                        # So we can't retrieve the original token
+                        items = invite_response.get("Items", [])
+                        if items and items[0].get("token_hash"):
+                            # Token exists but we can't get the original
+                            # For now, generate a new admin token
+                            invite_token = _create_admin_token(team_id, invites_table)
                     except:
-                        invite_token = None
+                        # Create a new admin token
+                        invite_token = _create_admin_token(team_id, invites_table)
+                
+                if not invite_token:
+                    # Last resort: create a new admin token
+                    invite_token = _create_admin_token(team_id, invites_table)
                 
                 teams.append({
                     "team_id": team_id,
@@ -95,3 +105,23 @@ def handle_get_coach_teams(event):
     except Exception as e:
         print(f"Get coach teams error: {e}")
         return err("Failed to fetch teams", status_code=500)
+
+
+def _create_admin_token(team_id, invites_table):
+    """Generate and store a new admin invite token for a team"""
+    try:
+        raw_token = secrets.token_urlsafe(32)
+        ts = int(time.time())
+        
+        invites_table.put_item(Item={
+            "token_hash": token_hash(raw_token),
+            "team_id": team_id,
+            "role": "admin",
+            "created_at": ts,
+            "expires_at": ts + (365 * 24 * 3600),
+        })
+        
+        return raw_token
+    except Exception as e:
+        print(f"Failed to create admin token: {e}")
+        return None
