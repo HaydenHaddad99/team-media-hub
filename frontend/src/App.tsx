@@ -2,16 +2,23 @@ import React, { useState, useEffect } from "react";
 import { LandingPageNew } from "./pages/LandingPageNew";
 import { Feed } from "./pages/Feed";
 import { JoinTeam } from "./pages/JoinTeam";
+import { CoachSignIn } from "./pages/CoachSignIn";
+import { CoachVerify } from "./pages/CoachVerify";
+import { CoachDashboard } from "./pages/CoachDashboard";
 import { CreateTeamForm } from "./components/CreateTeamForm";
 import { SetupKeyPrompt } from "./components/SetupKeyPrompt";
 import { getCurrentToken } from "./lib/api";
 
 export default function App() {
   const [hasToken, setHasToken] = useState<boolean>(() => !!getCurrentToken());
+  const [hasUserToken, setHasUserToken] = useState<boolean>(() => !!localStorage.getItem("tmh_user_token"));
   const [currentPage, setCurrentPage] = useState<string>(() => {
     const path = window.location.pathname;
     if (path === "/join") return "join";
     if (path === "/create-team") return "create-team";
+    if (path === "/coach/signin") return "coach-signin";
+    if (path === "/coach/verify") return "coach-verify";
+    if (path === "/coach/dashboard") return "coach-dashboard";
     return "app";
   });
   const [setupKey, setSetupKey] = useState<string>("");
@@ -20,10 +27,18 @@ export default function App() {
     // Simple client-side routing
     function handlePopState() {
       const path = window.location.pathname;
+      setHasUserToken(!!localStorage.getItem("tmh_user_token"));
+      
       if (path === "/join") {
         setCurrentPage("join");
       } else if (path === "/create-team") {
         setCurrentPage("create-team");
+      } else if (path === "/coach/signin") {
+        setCurrentPage("coach-signin");
+      } else if (path === "/coach/verify") {
+        setCurrentPage("coach-verify");
+      } else if (path === "/coach/dashboard") {
+        setCurrentPage("coach-dashboard");
       } else {
         setCurrentPage("app");
       }
@@ -36,6 +51,45 @@ export default function App() {
   // Join page (no auth required)
   if (currentPage === "join") {
     return <JoinTeam />;
+  }
+
+  // Coach sign-in flow
+  if (currentPage === "coach-signin") {
+    return (
+      <div style={{
+        minHeight: "100vh",
+        backgroundColor: "#0f0f1e",
+        color: "#fff",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "20px",
+      }}>
+        <CoachSignIn />
+      </div>
+    );
+  }
+
+  // Coach verify code
+  if (currentPage === "coach-verify") {
+    return (
+      <div style={{
+        minHeight: "100vh",
+        backgroundColor: "#0f0f1e",
+        color: "#fff",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "20px",
+      }}>
+        <CoachVerify />
+      </div>
+    );
+  }
+
+  // Coach dashboard
+  if (currentPage === "coach-dashboard") {
+    return <CoachDashboard />;
   }
 
   // Create team page (needs setup key)

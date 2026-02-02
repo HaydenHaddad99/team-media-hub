@@ -17,6 +17,11 @@ export function LandingPageNew({ onReady }: LandingPageNewProps) {
     window.dispatchEvent(new PopStateEvent("popstate"));
   };
 
+  const handleCoachSignInClick = () => {
+    window.history.pushState({}, "", "/coach/signin");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  };
+
   const screenshots = [
     {
       title: "Your team's photos in one place",
@@ -62,6 +67,14 @@ export function LandingPageNew({ onReady }: LandingPageNewProps) {
 
           <p className="coach-link">
             Coach?{" "}
+            <button
+              type="button"
+              onClick={handleCoachSignInClick}
+              className="link-button"
+            >
+              Sign in
+            </button>
+            {" "}or{" "}
             <button
               type="button"
               onClick={handleCreateTeamClick}

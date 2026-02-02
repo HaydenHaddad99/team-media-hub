@@ -15,6 +15,9 @@ from handlers.media_thumbnail import handle_media_thumbnail
 from handlers.media_delete import handle_media_delete
 from handlers.auth_join_team import handle_auth_join_team
 from handlers.auth_verify import handle_auth_verify
+from handlers.auth_coach_signin import handle_coach_signin
+from handlers.auth_verify_coach import handle_verify_coach
+from handlers.coach_teams import handle_get_coach_teams
 
 def _route(event: Dict) -> Tuple[str, str]:
     rc = (event.get("requestContext") or {})
@@ -65,6 +68,17 @@ def handler(event: Dict, context: Any) -> Dict:
         if method == "POST" and path == "/auth/verify":
             body = _json_body(event)
             return handle_auth_verify(event, body)
+
+        if method == "POST" and path == "/auth/coach-signin":
+            body = _json_body(event)
+            return handle_coach_signin(event, body)
+        
+        if method == "POST" and path == "/auth/verify-coach":
+            body = _json_body(event)
+            return handle_verify_coach(event, body)
+
+        if method == "GET" and path == "/coach/teams":
+            return handle_get_coach_teams(event)
 
         if method == "GET" and path == "/media/thumbnail":
             return handle_media_thumbnail(event)

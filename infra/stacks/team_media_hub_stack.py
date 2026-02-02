@@ -173,6 +173,9 @@ class TeamMediaHubStack(Stack):
             projection_type=dynamodb.ProjectionType.ALL,
         )
 
+        # GSI for user-id-index (already using user_id as partition key)
+        # So we can query directly by user_id
+
         # Magic link verification codes table
         auth_codes_table = dynamodb.Table(
             self,
@@ -181,6 +184,22 @@ class TeamMediaHubStack(Stack):
             billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
             removal_policy=RemovalPolicy.DESTROY,
             time_to_live_attribute="expires_at",
+        )
+
+        # User tokens table (for coach sign-in sessions)
+        user_tokens_table = dynamodb.Table(
+            self,
+            "UserTokensTable",
+            partition_key=dynamodb.Attribute(name="token_hash", type=dynamodb.AttributeType.STRING),
+            billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
+            removal_policy=RemovalPolicy.DESTROY,
+        )
+        
+        # GSI for user_id lookup
+        user_tokens_table.add_global_secondary_index(
+            index_name="user-id-index",
+            partition_key=dynamodb.Attribute(name="user_id", type=dynamodb.AttributeType.STRING),
+            projection_type=dynamodb.ProjectionType.ALL,
         )
 
         # -------------------------
@@ -203,6 +222,7 @@ class TeamMediaHubStack(Stack):
                 "TABLE_USERS": users_table.table_name,
                 "TABLE_TEAM_MEMBERS": team_members_table.table_name,
                 "TABLE_AUTH_CODES": auth_codes_table.table_name,
+                "TABLE_USER_TOKENS": user_tokens_table.table_name,
                 "SIGNED_URL_TTL_SECONDS": "900",
                 "MAX_UPLOAD_BYTES": str(300 * 1024 * 1024),
                 "ALLOWED_CONTENT_TYPES": "image/jpeg,image/png,image/heic,video/mp4,video/quicktime",
@@ -222,6 +242,7 @@ class TeamMediaHubStack(Stack):
         users_table.grant_read_write_data(api_fn)
         team_members_table.grant_read_write_data(api_fn)
         auth_codes_table.grant_read_write_data(api_fn)
+        user_tokens_table.grant_read_write_data(api_fn)
 
         api_fn.add_to_role_policy(iam.PolicyStatement(
             actions=["s3:PutObject", "s3:GetObject", "s3:HeadObject", "s3:DeleteObject"],
