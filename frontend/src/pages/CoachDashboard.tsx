@@ -145,7 +145,7 @@ export function CoachDashboard() {
             </p>
             <button
               onClick={() => {
-                window.history.pushState({}, "", "/coach/setup-key");
+                window.history.pushState({}, "", "/create-team");
                 window.dispatchEvent(new PopStateEvent("popstate"));
               }}
               style={{
