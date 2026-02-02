@@ -127,9 +127,10 @@ export default function App() {
           setupKey={setupKey}
           onCreated={(token) => {
             localStorage.setItem("tmh_invite_token", token);
-            window.history.pushState({}, "", "/coach/dashboard");
+            setHasToken(true);
+            window.history.pushState({}, "", "/");
             window.dispatchEvent(new PopStateEvent("popstate"));
-            setCurrentPage("coach-dashboard");
+            setCurrentPage("app");
           }}
         />
       </div>
