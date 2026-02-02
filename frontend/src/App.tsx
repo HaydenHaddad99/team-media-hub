@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Landing } from "./pages/Landing";
+import { LandingPageNew } from "./pages/LandingPageNew";
 import { Feed } from "./pages/Feed";
 import { JoinTeam } from "./pages/JoinTeam";
 import { getCurrentToken } from "./lib/api";
@@ -36,6 +36,6 @@ export default function App() {
   return hasToken ? (
     <Feed onLogout={() => setHasToken(false)} />
   ) : (
-    <Landing onReady={() => setHasToken(true)} />
+    <LandingPageNew onReady={() => setHasToken(true)} />
   );
 }
