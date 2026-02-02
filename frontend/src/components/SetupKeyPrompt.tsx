@@ -2,7 +2,6 @@ import React, { useState } from "react";
 
 export function SetupKeyPrompt({ onSubmit }: { onSubmit: (setupKey: string) => void }) {
   const [setupKey, setSetupKey] = useState("");
-  const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState("");
 
   function handleSubmit() {
@@ -16,42 +15,74 @@ export function SetupKeyPrompt({ onSubmit }: { onSubmit: (setupKey: string) => v
   }
 
   return (
-    <div style={{ marginTop: 16 }}>
-      {!showForm ? (
-        <button className="btn" onClick={() => setShowForm(true)}>
-          Create Team
+    <div style={{ 
+      padding: "32px", 
+      backgroundColor: "rgba(100,150,255,0.08)", 
+      borderRadius: "12px",
+      maxWidth: "500px",
+      width: "100%"
+    }}>
+      <h3 style={{ marginTop: 0, color: "#fff", fontSize: "24px" }}>Enter Setup Key</h3>
+      <p style={{ color: "#aaa", fontSize: "0.95rem", marginBottom: "24px" }}>
+        The setup key is required to create new teams.
+      </p>
+      <div style={{ display: "flex", gap: "12px" }}>
+        <input
+          style={{
+            flex: 1,
+            padding: "12px 16px",
+            backgroundColor: "rgba(255,255,255,0.05)",
+            border: "1px solid rgba(255,255,255,0.1)",
+            borderRadius: "6px",
+            color: "#fff",
+            fontSize: "14px",
+          }}
+          placeholder="Enter setup key…"
+          type="password"
+          value={setupKey}
+          onChange={(e) => {
+            setSetupKey(e.target.value);
+            setError("");
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleSubmit();
+          }}
+          autoFocus
+        />
+        <button 
+          onClick={handleSubmit}
+          style={{
+            padding: "12px 24px",
+            backgroundColor: "#00aeff",
+            color: "#000",
+            border: "none",
+            borderRadius: "6px",
+            cursor: "pointer",
+            fontSize: "14px",
+            fontWeight: "600",
+          }}
+        >
+          Continue
         </button>
-      ) : (
-        <div style={{ marginTop: 12, padding: "16px", backgroundColor: "rgba(100,150,255,0.08)", borderRadius: "8px" }}>
-          <h3 style={{ marginTop: 0 }}>Enter Setup Key</h3>
-          <p className="muted" style={{ fontSize: "0.9rem" }}>
-            The setup key is required to create new teams.
-          </p>
-          <div className="row">
-            <input
-              className="input"
-              placeholder="Enter setup key…"
-              type="password"
-              value={setupKey}
-              onChange={(e) => {
-                setSetupKey(e.target.value);
-                setError("");
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleSubmit();
-              }}
-              autoFocus
-            />
-            <button className="btn primary" onClick={handleSubmit}>
-              Continue
-            </button>
-          </div>
-          {error && <div style={{ color: "#ff4444", fontSize: "0.9rem", marginTop: 8 }}>{error}</div>}
-          <button className="btn link" onClick={() => setShowForm(false)} style={{ marginTop: 8 }}>
-            Cancel
-          </button>
-        </div>
-      )}
+      </div>
+      {error && <div style={{ color: "#ff4444", fontSize: "0.9rem", marginTop: 12 }}>{error}</div>}
+      <button 
+        onClick={() => {
+          window.history.pushState({}, "", "/coach/dashboard");
+          window.dispatchEvent(new PopStateEvent("popstate"));
+        }}
+        style={{
+          marginTop: "16px",
+          background: "none",
+          border: "none",
+          color: "#aaa",
+          cursor: "pointer",
+          fontSize: "14px",
+          textDecoration: "underline",
+        }}
+      >
+        Cancel
+      </button>
     </div>
   );
 }
