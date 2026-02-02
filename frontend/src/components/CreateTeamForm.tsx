@@ -13,12 +13,20 @@ export function CreateTeamForm({ setupKey, onCreated }: { setupKey: string; onCr
     setLoading(true);
     setError("");
     try {
+      const headers: Record<string, string> = {
+        "content-type": "application/json",
+        "x-setup-key": setupKey,
+      };
+      
+      // If coach is creating (has user_token), include it
+      const userToken = localStorage.getItem("tmh_user_token");
+      if (userToken) {
+        headers["x-user-token"] = userToken;
+      }
+      
       const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || ""}/teams`, {
         method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-setup-key": setupKey,
-        },
+        headers,
         body: JSON.stringify({ team_name: name }),
       });
 
