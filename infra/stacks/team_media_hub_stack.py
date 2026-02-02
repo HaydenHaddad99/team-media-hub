@@ -262,7 +262,7 @@ class TeamMediaHubStack(Stack):
             self,
             "HttpApi",
             cors_preflight=apigwv2.CorsPreflightOptions(
-                allow_headers=["content-type", "x-invite-token", "x-setup-key"],
+                allow_headers=["content-type", "x-invite-token", "x-setup-key", "x-user-token"],
                 allow_methods=[
                     apigwv2.CorsHttpMethod.GET,
                     apigwv2.CorsHttpMethod.POST,
@@ -288,6 +288,9 @@ class TeamMediaHubStack(Stack):
             ("/invites/revoke", apigwv2.HttpMethod.POST),
             ("/auth/join-team", apigwv2.HttpMethod.POST),
             ("/auth/verify", apigwv2.HttpMethod.POST),
+            ("/auth/coach-signin", apigwv2.HttpMethod.POST),
+            ("/auth/verify-coach", apigwv2.HttpMethod.POST),
+            ("/coach/teams", apigwv2.HttpMethod.GET),
             ("/media", apigwv2.HttpMethod.GET),
             ("/media", apigwv2.HttpMethod.DELETE),
             ("/media/thumbnail", apigwv2.HttpMethod.GET),
