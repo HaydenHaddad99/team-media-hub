@@ -51,7 +51,7 @@ def handle_teams_create(event, body, user_id=None):
 
     write_audit(team_id, "team_created", invite_token=None, meta={"team_name": team_name})
 
-    # If coach created the team, add them to TeamMembersTable
+    # If coach created the team, add them to TeamMembersTable with the admin token
     if user_id:
         try:
             team_members_table = DYNAMODB.Table(os.getenv("TABLE_TEAM_MEMBERS", "TeamMembersTable"))
@@ -60,6 +60,7 @@ def handle_teams_create(event, body, user_id=None):
                 "team_id": team_id,
                 "role": "admin",
                 "created_at": ts,
+                "invite_token": raw_token,  # Store the admin token so we can return it later
             })
         except Exception as e:
             print(f"Warning: Failed to add coach to team members: {e}")

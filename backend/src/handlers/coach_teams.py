@@ -62,22 +62,26 @@ def handle_get_coach_teams(event):
             team = team_response.get("Item")
             
             if team:
-                # Get an invite token for this team
-                invites_table = dynamodb.Table(os.getenv("TABLE_INVITES", "InvitesTable"))
+                # Try to get invite token from membership first (for coach-created teams)
+                # Otherwise query invites table
+                invite_token = membership.get("invite_token")
                 
-                # Query by team_id GSI (if exists)
-                try:
-                    invite_response = invites_table.query(
-                        IndexName="team-id-index",
-                        KeyConditionExpression="team_id = :tid AND #role = :role",
-                        ExpressionAttributeNames={"#role": "role"},
-                        ExpressionAttributeValues={":tid": team_id, ":role": "admin"},
-                        Limit=1,
-                    )
-                    invite = invite_response.get("Items", [None])[0]
-                    invite_token = invite.get("token") if invite else None
-                except:
-                    invite_token = None
+                if not invite_token:
+                    # Fallback: Get an invite token from invites table
+                    invites_table = dynamodb.Table(os.getenv("TABLE_INVITES", "InvitesTable"))
+                    
+                    # Scan invites table for admin token for this team (inefficient but works)
+                    try:
+                        invite_response = invites_table.scan(
+                            FilterExpression="team_id = :tid AND #role = :role",
+                            ExpressionAttributeNames={"#role": "role"},
+                            ExpressionAttributeValues={":tid": team_id, ":role": "admin"},
+                            Limit=1,
+                        )
+                        invite = invite_response.get("Items", [None])[0]
+                        invite_token = invite.get("token") if invite else None
+                    except:
+                        invite_token = None
                 
                 teams.append({
                     "team_id": team_id,
