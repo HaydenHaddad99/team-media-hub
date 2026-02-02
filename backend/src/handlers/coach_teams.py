@@ -34,10 +34,9 @@ def handle_get_coach_teams(event):
         # Get all teams where this user is a member with admin role
         team_members_table = dynamodb.Table(os.getenv("TABLE_TEAM_MEMBERS", "TeamMembersTable"))
         
-        # Query by user_id (assumes GSI user-id-index exists)
+        # Query by user_id (partition key - no need for GSI)
         try:
             response = team_members_table.query(
-                IndexName="user-id-index",
                 KeyConditionExpression="user_id = :uid",
                 ExpressionAttributeValues={":uid": user_id},
             )
