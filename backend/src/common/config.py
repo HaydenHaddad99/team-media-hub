@@ -1,6 +1,8 @@
 import os
+import boto3
 
 AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
+DYNAMODB = boto3.resource("dynamodb", region_name=AWS_REGION)
 
 TABLE_TEAMS = os.getenv("TABLE_TEAMS", "")
 TABLE_INVITES = os.getenv("TABLE_INVITES", "")
