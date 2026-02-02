@@ -2,8 +2,9 @@
 import time
 import uuid
 import secrets
+import os
 
-from common.config import TABLE_TEAMS, TABLE_INVITES, SETUP_KEY, FRONTEND_BASE_URL
+from common.config import TABLE_TEAMS, TABLE_INVITES, SETUP_KEY, FRONTEND_BASE_URL, DYNAMODB
 from common.db import put_item
 from common.responses import ok, err
 from common.auth import token_hash
@@ -13,7 +14,7 @@ from common.team_codes import generate_team_code
 def _now() -> int:
     return int(time.time())
 
-def handle_teams_create(event, body):
+def handle_teams_create(event, body, user_id=None):
     # Validate setup key if configured
     if SETUP_KEY:
         headers = (event or {}).get("headers") or {}
@@ -49,6 +50,19 @@ def handle_teams_create(event, body):
     })
 
     write_audit(team_id, "team_created", invite_token=None, meta={"team_name": team_name})
+
+    # If coach created the team, add them to TeamMembersTable
+    if user_id:
+        try:
+            team_members_table = DYNAMODB.Table(os.getenv("TABLE_TEAM_MEMBERS", "TeamMembersTable"))
+            team_members_table.put_item(Item={
+                "user_id": user_id,
+                "team_id": team_id,
+                "role": "admin",
+                "created_at": ts,
+            })
+        except Exception as e:
+            print(f"Warning: Failed to add coach to team members: {e}")
 
     invite_url = f"{FRONTEND_BASE_URL}/?token={raw_token}" if FRONTEND_BASE_URL else None
 

@@ -55,7 +55,21 @@ def handler(event: Dict, context: Any) -> Dict:
 
         if method == "POST" and path == "/teams":
             body = _json_body(event)
-            return handle_teams_create(event, body)
+            # Check if this is a coach creating a team (has x-user-token)
+            user_id = None
+            user_token = event.get("headers", {}).get("x-user-token", "").strip()
+            if user_token:
+                try:
+                    from common.config import DYNAMODB
+                    import os
+                    tokens_table = DYNAMODB.Table(os.getenv("TABLE_USER_TOKENS", "UserTokensTable"))
+                    response = tokens_table.get_item(Key={"token_hash": user_token})
+                    token_record = response.get("Item")
+                    if token_record:
+                        user_id = token_record.get("user_id")
+                except Exception as e:
+                    print(f"Warning: Failed to extract user_id from token: {e}")
+            return handle_teams_create(event, body, user_id=user_id)
 
         if method == "POST" and path == "/invites":
             body = _json_body(event)
