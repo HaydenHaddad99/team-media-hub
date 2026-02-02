@@ -34,8 +34,10 @@ export default function App() {
         setCurrentPage("join");
       } else if (path === "/create-team") {
         setCurrentPage("create-team");
+        setSetupKey(""); // Reset setup key when navigating to create-team
       } else if (path === "/coach/setup-key") {
         setCurrentPage("coach-setup-key");
+        setSetupKey(""); // Reset setup key when navigating to coach-setup-key
       } else if (path === "/coach/signin") {
         setCurrentPage("coach-signin");
       } else if (path === "/coach/verify") {
