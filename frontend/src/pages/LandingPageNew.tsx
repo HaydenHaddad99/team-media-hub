@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import "../styles/LandingPageNew.css";
 
 interface LandingPageNewProps {
@@ -7,8 +6,12 @@ interface LandingPageNewProps {
 }
 
 export function LandingPageNew({ onReady }: LandingPageNewProps) {
-  const navigate = useNavigate();
   const [showCreateTeam, setShowCreateTeam] = useState(false);
+
+  const handleJoinClick = () => {
+    window.history.pushState({}, "", "/join");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  };
 
   const screenshots = [
     {
@@ -48,7 +51,7 @@ export function LandingPageNew({ onReady }: LandingPageNewProps) {
 
           <button
             className="cta-primary"
-            onClick={() => navigate("/join")}
+            onClick={handleJoinClick}
           >
             Join with Team Code
           </button>
@@ -137,7 +140,7 @@ export function LandingPageNew({ onReady }: LandingPageNewProps) {
       {/* CTA Section */}
       <section className="cta-section">
         <h2>Ready to get started?</h2>
-        <button className="cta-primary" onClick={() => navigate("/join")}>
+        <button className="cta-primary" onClick={handleJoinClick}>
           Join with Team Code
         </button>
       </section>
