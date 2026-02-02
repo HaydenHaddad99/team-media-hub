@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import "../styles/LandingPageNew.css";
 
 interface LandingPageNewProps {
@@ -6,10 +6,14 @@ interface LandingPageNewProps {
 }
 
 export function LandingPageNew({ onReady }: LandingPageNewProps) {
-  const [showCreateTeam, setShowCreateTeam] = useState(false);
 
   const handleJoinClick = () => {
     window.history.pushState({}, "", "/join");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  };
+
+  const handleCreateTeamClick = () => {
+    window.history.pushState({}, "", "/create-team");
     window.dispatchEvent(new PopStateEvent("popstate"));
   };
 
@@ -60,7 +64,7 @@ export function LandingPageNew({ onReady }: LandingPageNewProps) {
             Coach?{" "}
             <button
               type="button"
-              onClick={() => setShowCreateTeam(!showCreateTeam)}
+              onClick={handleCreateTeamClick}
               className="link-button"
             >
               Create a team
