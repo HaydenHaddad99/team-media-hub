@@ -16,6 +16,7 @@ export default function App() {
     const path = window.location.pathname;
     if (path === "/join") return "join";
     if (path === "/create-team") return "create-team";
+    if (path === "/coach/setup-key") return "coach-setup-key";
     if (path === "/coach/signin") return "coach-signin";
     if (path === "/coach/verify") return "coach-verify";
     if (path === "/coach/dashboard") return "coach-dashboard";
@@ -34,6 +35,9 @@ export default function App() {
       } else if (path === "/create-team") {
         setCurrentPage("create-team");
         setSetupKey(""); // Reset setup key when navigating to create-team
+      } else if (path === "/coach/setup-key") {
+        setCurrentPage("coach-setup-key");
+        setSetupKey(""); // Reset setup key when navigating to coach-setup-key
       } else if (path === "/coach/signin") {
         setCurrentPage("coach-signin");
       } else if (path === "/coach/verify") {
@@ -93,7 +97,46 @@ export default function App() {
     return <CoachDashboard />;
   }
 
-  // Create team page (legacy, keep for backward compat but goes through same flow)
+  // Coach setup-key flow (authenticated coaches create teams here)
+  if (currentPage === "coach-setup-key") {
+    if (!setupKey) {
+      return (
+        <div style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "100vh",
+          backgroundColor: "#0f0f1e",
+          color: "#fff",
+        }}>
+          <SetupKeyPrompt onSubmit={(key) => setSetupKey(key)} />
+        </div>
+      );
+    }
+    return (
+      <div style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: "100vh",
+        backgroundColor: "#0f0f1e",
+        color: "#fff",
+        padding: "20px",
+      }}>
+        <CreateTeamForm
+          setupKey={setupKey}
+          onCreated={(token) => {
+            localStorage.setItem("tmh_invite_token", token);
+            window.history.pushState({}, "", "/coach/dashboard");
+            window.dispatchEvent(new PopStateEvent("popstate"));
+            setCurrentPage("coach-dashboard");
+          }}
+        />
+      </div>
+    );
+  }
+
+  // Create team page (for parents, not authenticated)
   if (currentPage === "create-team") {
     if (!setupKey) {
       return (
