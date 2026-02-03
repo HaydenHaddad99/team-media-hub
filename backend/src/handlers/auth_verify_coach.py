@@ -65,14 +65,22 @@ def handle_verify_coach(event, body=None):
         users_table = dynamodb.Table(os.getenv("TABLE_USERS", "UsersTable"))
         
         # Query by email GSI (if exists) or scan
+        user = None
         try:
             response = users_table.query(
                 IndexName="email-index",
                 KeyConditionExpression="email = :email",
                 ExpressionAttributeValues={":email": email},
             )
-            user = response.get("Items", [None])[0]
-        except:
+            items = response.get("Items", [])
+            user = items[0] if items else None
+            if user:
+                print(f"Found existing user for {email}: {user.get('user_id')}")
+            else:
+                print(f"No user found for email {email}, will create new user")
+        except Exception as e:
+            print(f"Email index query failed for {email}: {e}")
+            print(f"Will create new user as fallback")
             # Fallback: no email index, so we create a new user
             user = None
         
@@ -87,6 +95,7 @@ def handle_verify_coach(event, body=None):
                 "role": "coach",  # coaches always created as coaches
             }
             users_table.put_item(Item=user)
+            print(f"Created new user {user_id} for email {email}")
         else:
             user_id = user.get("user_id")
         
