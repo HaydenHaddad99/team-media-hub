@@ -57,8 +57,8 @@ export function CoachVerify({ onVerified }: CoachVerifyProps) {
         localStorage.setItem("tmh_user_id", data.user_id);
       }
 
-      // Clear temporary storage
-      localStorage.removeItem("coach_signin_email");
+      // Keep email for display purposes (stored during sign-in)
+      // localStorage.setItem("coach_signin_email", email) was already done in CoachSignIn
 
       // Navigate to coach dashboard
       window.history.pushState({}, "", "/coach/dashboard");

@@ -11,8 +11,11 @@ export function CoachDashboard() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [userEmail, setUserEmail] = useState("");
 
   useEffect(() => {
+      const email = localStorage.getItem("coach_signin_email") || "";
+      setUserEmail(email);
     fetchTeams();
   }, []);
 
@@ -92,7 +95,18 @@ export function CoachDashboard() {
           alignItems: "center",
           marginBottom: "40px",
         }}>
-          <h1 style={{ margin: 0, color: "#00aeff" }}>Your Teams</h1>
+          <div>
+            <h1 style={{ margin: 0, color: "#00aeff" }}>Your Teams</h1>
+            {userEmail && (
+              <p style={{
+                margin: "8px 0 0 0",
+                fontSize: "14px",
+                color: "#888",
+              }}>
+                Signed in as {userEmail}
+              </p>
+            )}
+          </div>
           <button
             onClick={handleSignOut}
             style={{

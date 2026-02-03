@@ -66,13 +66,12 @@ export function LandingPageNew({ onReady }: LandingPageNewProps) {
           </button>
 
           <p className="coach-link">
-            Coach?{" "}
             <button
               type="button"
               onClick={handleCoachSignInClick}
               className="link-button"
             >
-              Sign in
+              Coach sign-in
             </button>
           </p>
         </div>
