@@ -64,25 +64,40 @@ def handle_verify_coach(event, body=None):
         # Find or create user
         users_table = dynamodb.Table(os.getenv("TABLE_USERS", "UsersTable"))
         
-        # Query by email GSI (if exists) or scan
+        # Query by email GSI
         user = None
         try:
+            print(f"Attempting to query email-index for {email}")
             response = users_table.query(
                 IndexName="email-index",
                 KeyConditionExpression="email = :email",
                 ExpressionAttributeValues={":email": email},
             )
             items = response.get("Items", [])
+            print(f"Query returned {len(items)} items")
             user = items[0] if items else None
             if user:
-                print(f"Found existing user for {email}: {user.get('user_id')}")
+                print(f"✓ Found existing user for {email}: {user.get('user_id')}")
             else:
-                print(f"No user found for email {email}, will create new user")
+                print(f"✗ No user found in query for email {email}")
         except Exception as e:
-            print(f"Email index query failed for {email}: {e}")
-            print(f"Will create new user as fallback")
-            # Fallback: no email index, so we create a new user
-            user = None
+            print(f"✗ Email index query failed: {type(e).__name__}: {e}")
+            # Fallback: scan entire table for this email
+            print(f"Attempting fallback scan for email {email}")
+            try:
+                response = users_table.scan(
+                    FilterExpression="email = :email",
+                    ExpressionAttributeValues={":email": email},
+                )
+                items = response.get("Items", [])
+                user = items[0] if items else None
+                if user:
+                    print(f"✓ Found user via scan for {email}: {user.get('user_id')}")
+                else:
+                    print(f"✗ Scan also returned no results for {email}")
+            except Exception as scan_e:
+                print(f"✗ Scan also failed: {type(scan_e).__name__}: {scan_e}")
+                user = None
         
         if not user:
             # Create new user
@@ -95,7 +110,7 @@ def handle_verify_coach(event, body=None):
                 "role": "coach",  # coaches always created as coaches
             }
             users_table.put_item(Item=user)
-            print(f"Created new user {user_id} for email {email}")
+            print(f"➕ Created new user {user_id} for email {email}")
         else:
             user_id = user.get("user_id")
         
