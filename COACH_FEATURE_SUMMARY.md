@@ -131,6 +131,7 @@ Implemented a complete coach authentication and team management system that allo
 4. ✅ TeamMembersTable queried correctly by partition key (not non-existent GSI)
 5. ✅ Auto-generates admin tokens when coach opens previously-created teams
 6. ✅ Frontend sends x-user-token when coach creates team (backend can link them)
+7. ✅ Fixed role filtering bug: coach_teams.py filters for role="coach" or role="admin", manually updated existing records from "uploader" to "coach"
 
 ## Email Integration
 
