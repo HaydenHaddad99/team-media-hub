@@ -29,6 +29,7 @@ export default function App() {
     function handlePopState() {
       const path = window.location.pathname;
       setHasUserToken(!!localStorage.getItem("tmh_user_token"));
+      setHasToken(!!getCurrentToken()); // Re-check invite token when navigating
       
       if (path === "/join") {
         setCurrentPage("join");
