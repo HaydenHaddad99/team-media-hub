@@ -53,6 +53,8 @@ def handle_auth_join_team(event, body=None):
         })
     except Exception as e:
         import traceback
-        print(f"[ERROR] /auth/join-team: {str(e)}")
+        error_detail = str(e)
+        print(f"[ERROR] /auth/join-team: {error_detail}")
         traceback.print_exc()
-        return err("Server error", status_code=500)
+        # Return more detailed error for debugging (remove in production)
+        return err(f"Server error: {error_detail}", status_code=500)
