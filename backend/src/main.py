@@ -6,6 +6,8 @@ from handlers.health import handle_health
 from handlers.me import handle_me
 from handlers.demo import handle_demo
 from handlers.teams_create import handle_teams_create
+from handlers.teams_update import handle_teams_update
+from handlers.teams_delete import handle_teams_delete
 from handlers.invites_create import handle_invites_create
 from handlers.media_list import handle_media_list
 from handlers.media_presign_upload import handle_media_presign_upload
@@ -70,6 +72,23 @@ def handler(event: Dict, context: Any) -> Dict:
                 except Exception as e:
                     print(f"Warning: Failed to extract user_id from token: {e}")
             return handle_teams_create(event, body, user_id=user_id)
+
+        if method == "PUT" and path.startswith("/teams/"):
+            # Extract team_id from path: /teams/{team_id}
+            parts = path.split("/")
+            if len(parts) == 3:
+                team_id = parts[2]
+                body = _json_body(event)
+                return handle_teams_update(event, body, team_id=team_id)
+            return err("Invalid team path", 400, code="validation_error")
+
+        if method == "DELETE" and path.startswith("/teams/"):
+            # Extract team_id from path: /teams/{team_id}
+            parts = path.split("/")
+            if len(parts) == 3:
+                team_id = parts[2]
+                return handle_teams_delete(event, team_id=team_id)
+            return err("Invalid team path", 400, code="validation_error")
 
         if method == "POST" and path == "/invites":
             body = _json_body(event)

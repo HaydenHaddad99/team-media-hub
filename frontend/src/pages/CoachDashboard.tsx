@@ -1,4 +1,7 @@
 import { useState, useEffect } from "react";
+import { TeamActionsMenu } from "../components/TeamActionsMenu";
+import { RenameTeamModal } from "../components/RenameTeamModal";
+import { DeleteTeamModal } from "../components/DeleteTeamModal";
 
 interface Team {
   team_id: string;
@@ -12,6 +15,11 @@ export function CoachDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [userEmail, setUserEmail] = useState("");
+  
+  // Modal states
+  const [renameModal, setRenameModal] = useState<{ teamId: string; teamName: string } | null>(null);
+  const [deleteModal, setDeleteModal] = useState<{ teamId: string; teamName: string } | null>(null);
+  const [modalError, setModalError] = useState<string | null>(null);
 
   useEffect(() => {
       const email = localStorage.getItem("coach_signin_email") || "";
@@ -214,8 +222,15 @@ export function CoachDashboard() {
                   margin: "0 0 12px 0",
                   color: "#00aeff",
                   fontSize: "18px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
                 }}>
-                  {team.team_name}
+                  <span>{team.team_name}</span>
+                  <TeamActionsMenu
+                    onRename={() => setRenameModal({ teamId: team.team_id, teamName: team.team_name })}
+                    onDelete={() => setDeleteModal({ teamId: team.team_id, teamName: team.team_name })}
+                  />
                 </h3>
 
                 <div style={{
@@ -262,6 +277,34 @@ export function CoachDashboard() {
               </div>
             ))}
           </div>
+        )}
+
+        {renameModal && (
+          <RenameTeamModal
+            teamId={renameModal.teamId}
+            currentName={renameModal.teamName}
+            onClose={() => setRenameModal(null)}
+            onSuccess={(newName) => {
+              const updatedTeams = teams.map((t) =>
+                t.team_id === renameModal.teamId ? { ...t, team_name: newName } : t
+              );
+              setTeams(updatedTeams);
+            }}
+            onError={(err) => setModalError(err)}
+          />
+        )}
+
+        {deleteModal && (
+          <DeleteTeamModal
+            teamId={deleteModal.teamId}
+            teamName={deleteModal.teamName}
+            onClose={() => setDeleteModal(null)}
+            onSuccess={() => {
+              const updatedTeams = teams.filter((t) => t.team_id !== deleteModal.teamId);
+              setTeams(updatedTeams);
+            }}
+            onError={(err) => setModalError(err)}
+          />
         )}
       </div>
     </div>

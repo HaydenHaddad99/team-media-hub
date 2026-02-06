@@ -198,15 +198,28 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
           ) : null}
           {meErr ? <div className="error">{meErr}</div> : null}
         </div>
-        <button
-          className="btn"
-          onClick={() => {
-            clearStoredToken();
-            onLogout();
-          }}
-        >
-          Leave
-        </button>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {me?.user_id && (
+            <button
+              className="btn secondary"
+              onClick={() => {
+                window.history.pushState({}, "", "/coach/dashboard");
+                window.dispatchEvent(new PopStateEvent("popstate"));
+              }}
+            >
+              Back to Dashboard
+            </button>
+          )}
+          <button
+            className="btn"
+            onClick={() => {
+              clearStoredToken();
+              onLogout();
+            }}
+          >
+            Leave
+          </button>
+        </div>
       </header>
 
       <div className="panel">
