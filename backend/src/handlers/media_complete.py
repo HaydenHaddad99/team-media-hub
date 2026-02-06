@@ -71,15 +71,24 @@ def handle_media_complete(event, body):
         raw_token = invite.get("_raw_token")
         if raw_token:
             user_id = _token_hash(raw_token)
+            print(f"[UPLOAD] Parent token hashed: {user_id[:16]}...")
+        else:
+            print(f"[UPLOAD] ERROR: No _raw_token in invite!")
+    else:
+        print(f"[UPLOAD] Using explicit user_id: {user_id[:16] if len(str(user_id)) > 16 else user_id}")
     
     if user_id:
         item["uploader_user_id"] = user_id
+        print(f"[UPLOAD] Set uploader_user_id: {user_id[:16]}...")
         # Only add email if available
         email = invite.get("email")
         if email:
             item["uploader_email"] = email
+    else:
+        print(f"[UPLOAD] WARNING: No uploader_user_id set for media_id={media_id}")
     
     put_item(TABLE_MEDIA, item)
+    print(f"[UPLOAD] Saved media record: media_id={media_id}, team_id={team_id}, uploader_user_id={item.get('uploader_user_id', 'NONE')[:16] if item.get('uploader_user_id') else 'NONE'}...")
 
     write_audit(team_id, "media_complete", invite_token=invite.get("_raw_token"), meta={"media_id": media_id, "album_name": album_name})
 
