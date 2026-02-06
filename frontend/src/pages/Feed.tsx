@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { listMedia, MediaItem, clearStoredToken, getMe, MeResponse, presignDownload, deleteMedia } from "../lib/api";
+import { listMedia, MediaItem, clearStoredToken, getMe, MeResponse, presignDownload, deleteMedia, getUploaderIdentifier } from "../lib/api";
 import { UploadButton } from "../components/UploadButton";
 import { MediaGrid } from "../components/MediaGrid";
 import { AdminInvites } from "../components/AdminInvites";
@@ -16,15 +16,12 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
 
   const [me, setMe] = useState<MeResponse | null>(null);
   const [meErr, setMeErr] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const role = me?.invite?.role || "viewer";
   const canUpload = role === "uploader" || role === "admin";
   const isAdmin = role === "admin";
   const teamId = me?.team?.team_id || "";
-
-  // Get current user ID - could be from coach login or invite
-  // If they opened a team from CoachDashboard, their user_id is in localStorage
-  const currentUserId = localStorage.getItem("tmh_coach_user_id") || me?.user_id || null;
 
   // Get unique albums from items
   const albums = Array.from(new Set(items.map(i => i.album_name || "All uploads"))).sort();
@@ -103,6 +100,8 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
   useEffect(() => {
     loadMe();
     refresh();
+    // Get current user identifier (token hash for parents, user_id for coaches)
+    getUploaderIdentifier().then(setCurrentUserId);
   }, []);
 
   // If selection mode turns off or items change drastically, ensure selections stay valid

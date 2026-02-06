@@ -1,4 +1,5 @@
 from urllib.parse import parse_qs
+import hashlib
 
 from common.responses import ok, err
 from common.auth import require_invite
@@ -6,6 +7,10 @@ from common.config import TABLE_MEDIA, MEDIA_BUCKET
 from common.db import query_media_by_id, delete_item
 from common.s3 import delete_object
 from common.audit import write_audit
+
+def _token_hash(token: str) -> str:
+    """Hash a token for storage"""
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 def handle_media_delete(event):
     invite, auth_err = require_invite(event)
@@ -33,24 +38,44 @@ def handle_media_delete(event):
     # Ownership check: admin can delete anything, uploader can only delete own uploads
     if role == "uploader":
         uploader_user_id = item.get("uploader_user_id")
+        
+        # Determine current user's identifier
+        # Priority 1: Explicit user_id (from user-token or coach header)
+        # Priority 2: Hash of current invite token (for parent sharing)
         current_user_id = invite.get("user_id")
+        if not current_user_id:
+            headers = event.get("headers") or {}
+            current_user_id = headers.get("x-coach-user-id") or headers.get("X-Coach-User-Id")
+        if not current_user_id:
+            # Hash the current token
+            raw_token = invite.get("_raw_token")
+            if raw_token:
+                current_user_id = _token_hash(raw_token)
+        
+        # Log for debugging
+        print(f"Delete check: role={role}, uploader_id={uploader_user_id}, current_id={current_user_id}")
         
         # If this upload has an owner and it's not the current user, deny
         if uploader_user_id and uploader_user_id != current_user_id:
+            print(f"Denied: uploader_id {uploader_user_id} != current_id {current_user_id}")
             return err("You can only delete your own uploads.", 403, code="forbidden")
         
         # If upload has no owner (old uploads before accounts), only admin can delete
         if not uploader_user_id:
+            print(f"Denied: no uploader_user_id on record (legacy upload)")
             return err("Only admins can delete legacy uploads.", 403, code="forbidden")
 
     object_key = item.get("object_key")
     thumb_key = item.get("thumb_key")
+    preview_key = item.get("preview_key")
 
     # Delete S3 objects first (best effort)
     if object_key:
         delete_object(MEDIA_BUCKET, object_key)
     if thumb_key:
         delete_object(MEDIA_BUCKET, thumb_key)
+    if preview_key:
+        delete_object(MEDIA_BUCKET, preview_key)
 
     # Delete DB record
     delete_item(TABLE_MEDIA, {"team_id": team_id, "sk": item["sk"]})

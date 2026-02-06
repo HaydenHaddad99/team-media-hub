@@ -16,11 +16,39 @@ export function clearStoredToken() {
   localStorage.removeItem("tmh_invite_token");
 }
 
+/**
+ * Get the current uploader's identifier (user_id or token hash)
+ * - For coaches: their tmh_coach_user_id
+ * - For parents: SHA256 hash of their invite token (stable identifier per parent)
+ */
+export async function getUploaderIdentifier(): Promise<string | null> {
+  // Check if this is a coach
+  const coachUserId = localStorage.getItem("tmh_coach_user_id");
+  if (coachUserId) {
+    return coachUserId;
+  }
+
+  // For parents, hash their invite token
+  const token = getStoredToken();
+  if (!token) {
+    return null;
+  }
+
+  // SHA256 hash of token (must match backend hashing)
+  const encoder = new TextEncoder();
+  const data = encoder.encode(token);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  return hashHex;
+}
+
 export function requireApiBaseUrl() {
   if (!API_BASE_URL) {
     throw new Error("Missing VITE_API_BASE_URL. Set it in frontend/.env");
   }
 }
+
 
 export async function request<T>(
   path: string,

@@ -1,5 +1,6 @@
 import time
 import boto3
+import hashlib
 from common.config import TABLE_MEDIA, MEDIA_BUCKET
 from common.db import put_item
 from common.responses import ok, err
@@ -7,6 +8,10 @@ from common.auth import require_invite, require_role
 from common.audit import write_audit
 
 s3 = boto3.client("s3")
+
+def _token_hash(token: str) -> str:
+    """Hash a token for storage"""
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 def handle_media_complete(event, body):
     invite, auth_err = require_invite(event)
@@ -52,14 +57,20 @@ def handle_media_complete(event, body):
         "gsi1sk": f"{ts}",
     }
     
-    # Store uploader_user_id if available:
-    # 1. From user-token auth (coaches with direct user_id in invite)
-    # 2. From x-coach-user-id header (coaches accessing via invite token but preserving their identity)
+    # Store uploader_user_id for ownership tracking:
+    # Priority 1: User auth (user_id from direct user tokens or coach accessing via invite)
+    # Priority 2: Invite token hash (for parents using shared invite links)
     user_id = invite.get("user_id")
     if not user_id:
         # Check for coach user_id passed in header when coach opens team with invite token
         headers = event.get("headers") or {}
         user_id = headers.get("x-coach-user-id") or headers.get("X-Coach-User-Id")
+    
+    if not user_id:
+        # For parents using invite tokens, hash the token to create a stable identifier
+        raw_token = invite.get("_raw_token")
+        if raw_token:
+            user_id = _token_hash(raw_token)
     
     if user_id:
         item["uploader_user_id"] = user_id
