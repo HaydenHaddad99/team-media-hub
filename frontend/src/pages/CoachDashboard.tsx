@@ -51,6 +51,14 @@ export function CoachDashboard() {
     // Store the invite token and team context
     localStorage.setItem("tmh_invite_token", team.invite_token);
     localStorage.setItem("team_id", team.team_id);
+    // Keep user_id available so Feed can track uploads properly
+    const userToken = localStorage.getItem("tmh_user_token");
+    if (userToken) {
+      const userId = localStorage.getItem("tmh_user_id");
+      if (userId) {
+        localStorage.setItem("tmh_coach_user_id", userId);
+      }
+    }
     
     // Navigate to app
     window.history.pushState({}, "", "/");

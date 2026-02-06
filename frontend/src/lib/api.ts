@@ -37,6 +37,10 @@ export async function request<T>(
   // Attach invite token if present
   if (token) headers["x-invite-token"] = token;
 
+  // Attach coach user_id if available (for tracking uploads by authenticated coaches)
+  const coachUserId = localStorage.getItem("tmh_coach_user_id");
+  if (coachUserId) headers["x-coach-user-id"] = coachUserId;
+
   // Default JSON content type for requests with body
   const hasBody = !!opts.body;
   if (hasBody && !headers["content-type"]) headers["content-type"] = "application/json";

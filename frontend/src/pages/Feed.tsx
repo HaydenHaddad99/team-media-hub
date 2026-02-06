@@ -22,6 +22,10 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
   const isAdmin = role === "admin";
   const teamId = me?.team?.team_id || "";
 
+  // Get current user ID - could be from coach login or invite
+  // If they opened a team from CoachDashboard, their user_id is in localStorage
+  const currentUserId = localStorage.getItem("tmh_coach_user_id") || me?.user_id || null;
+
   // Get unique albums from items
   const albums = Array.from(new Set(items.map(i => i.album_name || "All uploads"))).sort();
   
@@ -288,7 +292,7 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
               selectMode={selectMode}
               selectedIds={selectedIds}
               onToggleSelect={toggleSelect}
-              currentUserId={me?.user_id}
+              currentUserId={currentUserId}
               userRole={role}
             />
             {nextCursor && albumFilter === "all" ? (

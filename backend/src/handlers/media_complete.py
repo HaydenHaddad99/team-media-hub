@@ -52,8 +52,15 @@ def handle_media_complete(event, body):
         "gsi1sk": f"{ts}",
     }
     
-    # Store uploader_user_id if available (account-based uploads)
+    # Store uploader_user_id if available:
+    # 1. From user-token auth (coaches with direct user_id in invite)
+    # 2. From x-coach-user-id header (coaches accessing via invite token but preserving their identity)
     user_id = invite.get("user_id")
+    if not user_id:
+        # Check for coach user_id passed in header when coach opens team with invite token
+        headers = event.get("headers") or {}
+        user_id = headers.get("x-coach-user-id") or headers.get("X-Coach-User-Id")
+    
     if user_id:
         item["uploader_user_id"] = user_id
         item["uploader_email"] = invite.get("email")

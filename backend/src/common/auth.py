@@ -1,11 +1,12 @@
 
 import hashlib
 import time
+import os
 from typing import Dict, Optional, Tuple
 
 from boto3.dynamodb.conditions import Key
 
-from .config import TABLE_INVITES
+from .config import TABLE_INVITES, DYNAMODB
 from .db import get_item
 from .responses import err
 
@@ -51,3 +52,27 @@ def require_role(invite: Dict, allowed_roles: set) -> Optional[Dict]:
     if role not in allowed_roles:
         return err("Insufficient permissions.", 403, code="forbidden")
     return None
+
+def get_user_from_token(event: Dict) -> Tuple[Optional[Dict], Optional[Dict]]:
+    """
+    Get user record from x-user-token header.
+    Returns: (user_record with user_id and email, error_response)
+    """
+    headers = event.get("headers") or {}
+    token = headers.get("x-user-token") or headers.get("X-User-Token")
+    if not token:
+        return None, None  # Not an error, just not provided
+    
+    try:
+        dynamodb = DYNAMODB
+        tokens_table = dynamodb.Table(os.getenv("TABLE_USER_TOKENS", "UserTokensTable"))
+        response = tokens_table.get_item(Key={"token_hash": token})
+        token_record = response.get("Item")
+        
+        if not token_record:
+            return None, err("Invalid user token.", 401, code="unauthorized")
+        
+        return token_record, None
+    except Exception as e:
+        print(f"Error getting user token: {e}")
+        return None, err("Failed to validate user token.", 500)
