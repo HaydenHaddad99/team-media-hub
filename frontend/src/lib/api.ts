@@ -169,6 +169,7 @@ export function getCurrentToken(): string | null {
 export type MeResponse = {
   team: { team_id: string; team_name: string; team_code?: string | null };
   invite: { role: "viewer" | "uploader" | "admin"; expires_at?: number };
+  user_id?: string | null; // Present for coach/parent auth, absent for invite-only auth
 };
 
 export async function getMe(): Promise<MeResponse> {
