@@ -262,7 +262,7 @@ class TeamMediaHubStack(Stack):
             self,
             "HttpApi",
             cors_preflight=apigwv2.CorsPreflightOptions(
-                allow_headers=["content-type", "x-invite-token", "x-setup-key", "x-user-token"],
+                allow_headers=["content-type", "x-invite-token", "x-setup-key", "x-user-token", "x-coach-user-id"],
                 allow_methods=[
                     apigwv2.CorsHttpMethod.GET,
                     apigwv2.CorsHttpMethod.POST,
