@@ -266,6 +266,7 @@ class TeamMediaHubStack(Stack):
                 allow_methods=[
                     apigwv2.CorsHttpMethod.GET,
                     apigwv2.CorsHttpMethod.POST,
+                    apigwv2.CorsHttpMethod.PUT,
                     apigwv2.CorsHttpMethod.DELETE,
                     apigwv2.CorsHttpMethod.OPTIONS,
                 ],
@@ -284,6 +285,8 @@ class TeamMediaHubStack(Stack):
             ("/me", apigwv2.HttpMethod.GET),
             ("/demo", apigwv2.HttpMethod.GET),
             ("/teams", apigwv2.HttpMethod.POST),
+            ("/teams/{team_id}", apigwv2.HttpMethod.PUT),
+            ("/teams/{team_id}", apigwv2.HttpMethod.DELETE),
             ("/invites", apigwv2.HttpMethod.POST),
             ("/invites/revoke", apigwv2.HttpMethod.POST),
             ("/auth/join-team", apigwv2.HttpMethod.POST),
