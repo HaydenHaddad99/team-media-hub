@@ -3,6 +3,7 @@ import os
 import re
 import boto3
 import logging
+from urllib.parse import unquote_plus
 from PIL import Image
 
 logger = logging.getLogger()
@@ -131,6 +132,10 @@ def handler(event, context):
         key = s3info.get("object", {}).get("key")
         if not bucket or not key:
             continue
+
+        # S3 event keys are URL-encoded (spaces, commas, etc.)
+        # Decode before parsing/reading from S3
+        key = unquote_plus(key)
 
         parsed = _parse_key(key)
         if not parsed:
