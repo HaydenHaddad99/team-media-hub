@@ -49,9 +49,14 @@ export function PreviewModal({
   // Admin/coach can delete anything; parents can only delete their own uploads
   const canDeleteItem = (() => {
     if (!canDelete || !currentItem) return false;
-    if (userRole === "admin" || userRole === "coach") return true; // Admins/coaches can delete anything
-    if (!currentItem.uploader_user_id) return false; // Old uploads without owner info - cannot delete
-    return currentItem.uploader_user_id === currentUserId; // Can only delete own uploads
+    // Admins can always delete
+    if (userRole === "admin") return true;
+    // Coaches (identified by having coach_user_id in localStorage) can delete anything
+    const isCoach = !!localStorage.getItem("tmh_coach_user_id");
+    if (isCoach) return true;
+    // Parents can only delete their own uploads
+    if (!currentItem.uploader_user_id) return false;
+    return currentItem.uploader_user_id === currentUserId;
   })();
 
   // Minimum swipe distance (in px) to trigger navigation

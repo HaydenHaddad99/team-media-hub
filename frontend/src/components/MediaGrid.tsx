@@ -55,9 +55,14 @@ export function MediaGrid({
   // Determine if a user can delete an item
   function canDeleteItem(item: MediaItem): boolean {
     if (!canDelete) return false;
-    if (userRole === "admin" || userRole === "coach") return true; // Admins/coaches can delete anything
-    if (!item.uploader_user_id) return false; // Old uploads without owner - cannot delete
-    return item.uploader_user_id === currentUserId; // Can only delete own uploads
+    // Admins can always delete
+    if (userRole === "admin") return true;
+    // Coaches (identified by having coach_user_id in localStorage) can delete anything
+    const isCoach = !!localStorage.getItem("tmh_coach_user_id");
+    if (isCoach) return true;
+    // Parents can only delete their own uploads
+    if (!item.uploader_user_id) return false;
+    return item.uploader_user_id === currentUserId;
   }
 
   async function handleDelete() {
