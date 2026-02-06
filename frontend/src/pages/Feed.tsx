@@ -288,6 +288,8 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
               selectMode={selectMode}
               selectedIds={selectedIds}
               onToggleSelect={toggleSelect}
+              currentUserId={me?.user_id}
+              userRole={role}
             />
             {nextCursor && albumFilter === "all" ? (
               <div style={{ display: "flex", justifyContent: "center", marginTop: 20 }}>

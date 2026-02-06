@@ -10,11 +10,15 @@ export function ThumbnailTile({
   onClick,
   selected = false,
   selectMode = false,
+  disabled = false,
+  title,
 }: {
   item: MediaItem;
   onClick: (item: MediaItem) => void;
   selected?: boolean;
   selectMode?: boolean;
+  disabled?: boolean;
+  title?: string;
 }) {
   const video = isVideo(item.content_type);
   const [imageError, setImageError] = useState(false);
@@ -23,7 +27,15 @@ export function ThumbnailTile({
   const showPlaceholder = !item.thumb_url || imageError;
 
   return (
-    <div className={`thumbCard${selected ? " thumbCardSelected" : ""}`} onClick={() => onClick(item)}>
+    <div 
+      className={`thumbCard${selected ? " thumbCardSelected" : ""}${disabled ? " thumbCardDisabled" : ""}`} 
+      onClick={() => !disabled && onClick(item)}
+      title={title}
+      style={{
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.5 : 1,
+      }}
+    >
       <div className="thumbMedia">
         {video ? (
           !showPlaceholder && item.thumb_url ? (

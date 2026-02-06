@@ -27,6 +27,7 @@ Implemented a complete coach authentication and team management system that allo
 - "Open Team" button to access team media feed
 - "Create a Team" button to create new teams
 - "Sign Out" button to clear session
+- "Signed in as {email}" indicator for trust
 
 **Backend Endpoint:**
 - `GET /coach/teams` - Returns list of teams with admin tokens (requires x-user-token header)
@@ -82,9 +83,10 @@ Implemented a complete coach authentication and team management system that allo
 - Added routes: /coach/signin, /coach/verify, /coach/dashboard, /coach/setup-key
 - Added state management for coach authentication (hasUserToken)
 - Routes only accessible after coach verification
+- Re-check invite token on navigation (fixes Open Team redirect requiring reload)
 
 **Landing Page Updates:**
-- `LandingPageNew.tsx` - Updated to show "Coach? Sign in" link (removed "Create a team" link)
+- `LandingPageNew.tsx` - Updated to show "Coach sign-in" link (removed "Create a team" link)
 - New coaches must sign in first before accessing team creation
 
 ## Key Files Modified/Created
@@ -132,12 +134,14 @@ Implemented a complete coach authentication and team management system that allo
 5. ✅ Auto-generates admin tokens when coach opens previously-created teams
 6. ✅ Frontend sends x-user-token when coach creates team (backend can link them)
 7. ✅ Fixed role filtering bug: coach_teams.py filters for role="coach" or role="admin", manually updated existing records from "uploader" to "coach"
+8. ✅ Fixed Open Team navigation so feed loads immediately without refresh
 
 ## Email Integration
 
 **SES Setup:**
 - Uses AWS SES for sending magic link codes
-- Currently in sandbox mode (can only email verified addresses)
+- Domain `teammediahub.co` verified in us-east-1
+- Sending from `noreply@teammediahub.co`
 - Email template: Simple text email with 6-digit code and expiration info
 - Codes expire in 10 minutes
 
@@ -154,11 +158,12 @@ Parent flow (unchanged):
 - ✅ Parent still uses team code to join via /join page
 - ✅ Parent sees "Join with Team Code" button on homepage
 - ✅ Coach sign-in doesn't interfere with parent flow
+- ✅ Parent join flow works without per-email SES verification
 
 ## Known Limitations
 
 1. **Free Tier AWS** - Cannot use Route53 for custom domain setup
-2. **SES Sandbox** - Can only email verified addresses (production access requires ticket)
+2. **SES Sandbox** - No longer applicable after domain verification
 3. **No invite coaches feature** - Admins cannot invite other coaches yet
 4. **No team settings** - Coaches cannot edit team details after creation
 5. **No coach roles** - All coaches have admin role (no editor/viewer roles for coaches yet)

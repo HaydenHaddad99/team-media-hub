@@ -12,6 +12,8 @@ export function MediaGrid({
   selectMode = false,
   selectedIds,
   onToggleSelect,
+  currentUserId,
+  userRole,
 }: {
   items: MediaItem[];
   loading?: boolean;
@@ -20,6 +22,8 @@ export function MediaGrid({
   selectMode?: boolean;
   selectedIds?: Set<string>;
   onToggleSelect?: (item: MediaItem) => void;
+  currentUserId?: string | null;
+  userRole?: string;
 }) {
   const [err, setErr] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -48,11 +52,19 @@ export function MediaGrid({
     });
   }
 
+  // Determine if a user can delete an item
+  function canDeleteItem(item: MediaItem): boolean {
+    if (!canDelete) return false;
+    if (userRole === "admin" || userRole === "coach") return true; // Admins/coaches can delete anything
+    if (!item.uploader_user_id) return false; // Old uploads without owner - cannot delete
+    return item.uploader_user_id === currentUserId; // Can only delete own uploads
+  }
+
   async function handleDelete() {
-    if (!canDelete || preview.currentIndex === -1) return;
+    if (preview.currentIndex === -1) return;
 
     const currentItem = items[preview.currentIndex];
-    if (!currentItem) return;
+    if (!currentItem || !canDeleteItem(currentItem)) return;
 
     const yes = window.confirm("Delete this media? This cannot be undone.");
     if (!yes) return;
@@ -80,21 +92,29 @@ export function MediaGrid({
           // Show 8 skeleton placeholders while loading
           Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={`skeleton-${i}`} />)
         ) : (
-          items.map((item) => (
-            <ThumbnailTile
-              key={item.media_id}
-              item={item}
-              onClick={(it) => {
-                if (selectMode) {
-                  onToggleSelect?.(it);
-                } else {
-                  openItem(it);
-                }
-              }}
-              selected={selectedIds?.has(item.media_id) || false}
-              selectMode={selectMode}
-            />
-          ))
+          items.map((item) => {
+            const isDeletable = canDeleteItem(item);
+            const isSelectDisabled = selectMode && !isDeletable;
+            return (
+              <ThumbnailTile
+                key={item.media_id}
+                item={item}
+                onClick={(it) => {
+                  if (selectMode) {
+                    if (!isSelectDisabled) {
+                      onToggleSelect?.(it);
+                    }
+                  } else {
+                    openItem(it);
+                  }
+                }}
+                selected={selectedIds?.has(item.media_id) || false}
+                selectMode={selectMode}
+                disabled={isSelectDisabled}
+                title={isSelectDisabled ? "You can only select your own uploads" : undefined}
+              />
+            );
+          })
         )}
       </div>
 
@@ -107,6 +127,8 @@ export function MediaGrid({
         deleting={deleting}
         onDelete={handleDelete}
         onClose={() => setPreview({ open: false, currentIndex: -1 })}
+        currentUserId={currentUserId}
+        userRole={userRole}
       />
     </div>
   );

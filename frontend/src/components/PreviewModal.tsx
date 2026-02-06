@@ -7,6 +7,8 @@ type Props = {
   currentIndex: number;
   onNavigate: (direction: 1 | -1) => void;
   canDelete?: boolean;
+  currentUserId?: string | null;
+  userRole?: string;
   onDelete?: () => void;
   deleting?: boolean;
   onClose: () => void;
@@ -25,6 +27,8 @@ export function PreviewModal({
   currentIndex,
   onNavigate,
   canDelete,
+  currentUserId,
+  userRole,
   onDelete,
   deleting,
   onClose,
@@ -40,6 +44,15 @@ export function PreviewModal({
   const currentItem = items[currentIndex];
   const hasPrev = currentIndex > 0;
   const hasNext = currentIndex < items.length - 1;
+
+  // Determine if current user can delete this item
+  // Admin/coach can delete anything; parents can only delete their own uploads
+  const canDeleteItem = (() => {
+    if (!canDelete || !currentItem) return false;
+    if (userRole === "admin" || userRole === "coach") return true; // Admins/coaches can delete anything
+    if (!currentItem.uploader_user_id) return false; // Old uploads without owner info - cannot delete
+    return currentItem.uploader_user_id === currentUserId; // Can only delete own uploads
+  })();
 
   // Minimum swipe distance (in px) to trigger navigation
   const minSwipeDistance = 50;
@@ -295,9 +308,13 @@ export function PreviewModal({
 
         <div className="modalFooter">
           <div className="row" style={{ gap: 10 }}>
-            {canDelete && onDelete ? (
+            {canDeleteItem && onDelete ? (
               <button className="btn btn-danger" onClick={onDelete} disabled={!!deleting || isLoading}>
                 {deleting ? "Deleting…" : "Delete"}
+              </button>
+            ) : canDelete && !canDeleteItem ? (
+              <button className="btn btn-danger" disabled title="You can only delete your own uploads">
+                Delete
               </button>
             ) : null}
             <button 
