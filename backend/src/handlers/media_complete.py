@@ -74,7 +74,10 @@ def handle_media_complete(event, body):
     
     if user_id:
         item["uploader_user_id"] = user_id
-        item["uploader_email"] = invite.get("email")
+        # Only add email if available
+        email = invite.get("email")
+        if email:
+            item["uploader_email"] = email
     
     put_item(TABLE_MEDIA, item)
 
