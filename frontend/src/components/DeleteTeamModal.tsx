@@ -42,7 +42,7 @@ export function DeleteTeamModal({
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || "Failed to delete team");
+        throw new Error(data.error?.message || data.message || "Failed to delete team");
       }
 
       onSuccess();
