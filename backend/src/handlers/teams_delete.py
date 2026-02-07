@@ -15,13 +15,16 @@ def handle_teams_delete(event, team_id=None):
         return err("team_id is required", 400, code="validation_error")
 
     # Verify user is admin of this team
-    auth_result = require_invite(event)
-    if auth_result:
-        return auth_result
+    invite, auth_err = require_invite(event)
+    if auth_err:
+        return auth_err
 
-    role_result = require_role(event, ["admin"], team_id=team_id)
-    if role_result:
-        return role_result
+    if invite.get("team_id") != team_id:
+        return err("Insufficient permissions.", 403, code="forbidden")
+
+    role_err = require_role(invite, {"admin"})
+    if role_err:
+        return role_err
 
     try:
         # Get team to verify it exists

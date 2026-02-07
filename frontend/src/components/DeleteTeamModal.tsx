@@ -29,7 +29,7 @@ export function DeleteTeamModal({
     setError(null);
 
     try {
-      const token = localStorage.getItem("invite_token");
+      const token = localStorage.getItem("tmh_invite_token");
       const response = await fetch(
         `${import.meta.env.VITE_API_BASE_URL}/teams/${teamId}`,
         {
