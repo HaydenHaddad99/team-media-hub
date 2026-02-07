@@ -14,6 +14,18 @@ def handle_teams_delete(event, team_id=None):
     if not team_id:
         return err("team_id is required", 400, code="validation_error")
 
+    # Check if this is a coach - if so, verify coach_verified flag
+    user_token = event.get("headers", {}).get("x-user-token", "").strip()
+    if user_token:
+        try:
+            tokens_table = DYNAMODB.Table(os.getenv("TABLE_USER_TOKENS", "UserTokensTable"))
+            response = tokens_table.get_item(Key={"token_hash": user_token})
+            token_record = response.get("Item")
+            if token_record and not token_record.get("coach_verified", False):
+                return err("Coach access not verified. Please verify your setup key first.", 403, code="forbidden")
+        except Exception as e:
+            print(f"Warning: Failed to check coach_verified: {e}")
+
     # Verify user is admin of this team
     invite, auth_err = require_invite(event)
     if auth_err:

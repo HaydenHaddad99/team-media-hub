@@ -33,6 +33,7 @@ def handle_get_coach_teams(event):
         
         user_id = token_record.get("user_id")
         email = token_record.get("email")
+        coach_verified = token_record.get("coach_verified", False)
         
         # Get all teams where this user is a member with admin role
         team_members_table = dynamodb.Table(os.getenv("TABLE_TEAM_MEMBERS", "TeamMembersTable"))
@@ -100,7 +101,7 @@ def handle_get_coach_teams(event):
                     "invite_token": invite_token,
                 })
         
-        return ok({"teams": teams})
+        return ok({"teams": teams, "coach_verified": coach_verified})
     
     except Exception as e:
         print(f"Get coach teams error: {e}")

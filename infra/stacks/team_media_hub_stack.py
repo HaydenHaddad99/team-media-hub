@@ -294,6 +294,7 @@ class TeamMediaHubStack(Stack):
             ("/auth/coach-signin", apigwv2.HttpMethod.POST),
             ("/auth/verify-coach", apigwv2.HttpMethod.POST),
             ("/coach/teams", apigwv2.HttpMethod.GET),
+            ("/coach/verify-access", apigwv2.HttpMethod.POST),
             ("/media", apigwv2.HttpMethod.GET),
             ("/media", apigwv2.HttpMethod.DELETE),
             ("/media/thumbnail", apigwv2.HttpMethod.GET),

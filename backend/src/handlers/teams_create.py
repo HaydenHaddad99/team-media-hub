@@ -21,6 +21,19 @@ def handle_teams_create(event, body, user_id=None):
         provided_key = headers.get("x-setup-key") or headers.get("X-Setup-Key") or ""
         if provided_key != SETUP_KEY:
             return err("Invalid or missing setup key.", 403, code="forbidden")
+    
+    # If coach is creating, verify they have coach_verified=True
+    if user_id:
+        try:
+            tokens_table = DYNAMODB.Table(os.getenv("TABLE_USER_TOKENS", "UserTokensTable"))
+            user_token = event.get("headers", {}).get("x-user-token", "").strip()
+            if user_token:
+                response = tokens_table.get_item(Key={"token_hash": user_token})
+                token_record = response.get("Item")
+                if token_record and not token_record.get("coach_verified", False):
+                    return err("Coach access not verified. Please verify your setup key first.", 403, code="forbidden")
+        except Exception as e:
+            print(f"Warning: Failed to check coach_verified: {e}")
 
     team_name = (body or {}).get("team_name", "").strip()
     if not team_name:

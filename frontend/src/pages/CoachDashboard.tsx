@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { TeamActionsMenu } from "../components/TeamActionsMenu";
 import { RenameTeamModal } from "../components/RenameTeamModal";
 import { DeleteTeamModal } from "../components/DeleteTeamModal";
+import { VerifyCoachAccess } from "../components/VerifyCoachAccess";
 
 interface Team {
   team_id: string;
@@ -15,6 +16,7 @@ export function CoachDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [userEmail, setUserEmail] = useState("");
+  const [coachVerified, setCoachVerified] = useState(false);
   
   // Modal states
   const [renameModal, setRenameModal] = useState<{ teamId: string; teamName: string } | null>(null);
@@ -48,6 +50,7 @@ export function CoachDashboard() {
 
       const data = await res.json();
       setTeams(data.teams || []);
+      setCoachVerified(data.coach_verified || false);
     } catch (err: any) {
       setError(err.message || "Failed to load teams");
     } finally {
@@ -129,22 +132,28 @@ export function CoachDashboard() {
                 window.history.pushState({}, "", "/coach/setup-key");
                 window.dispatchEvent(new PopStateEvent("popstate"));
               }}
+              disabled={!coachVerified}
               style={{
                 padding: "8px 16px",
-                backgroundColor: "#00aeff",
-                color: "#000",
+                backgroundColor: coachVerified ? "#00aeff" : "#555",
+                color: coachVerified ? "#000" : "#888",
                 border: "none",
                 borderRadius: "6px",
-                cursor: "pointer",
+                cursor: coachVerified ? "pointer" : "not-allowed",
                 fontSize: "14px",
                 fontWeight: "600",
                 transition: "all 0.3s ease",
+                opacity: coachVerified ? 1 : 0.6,
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = "#33beff";
+                if (coachVerified) {
+                  e.currentTarget.style.backgroundColor = "#33beff";
+                }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "#00aeff";
+                if (coachVerified) {
+                  e.currentTarget.style.backgroundColor = "#00aeff";
+                }
               }}
             >
               Create Team
@@ -187,6 +196,13 @@ export function CoachDashboard() {
           }}>
             {error}
           </div>
+        )}
+
+        {!coachVerified && (
+          <VerifyCoachAccess onVerified={() => {
+            setCoachVerified(true);
+            fetchTeams();
+          }} />
         )}
 
         {teams.length === 0 ? (
@@ -254,10 +270,12 @@ export function CoachDashboard() {
                   alignItems: "center",
                 }}>
                   <span>{team.team_name}</span>
-                  <TeamActionsMenu
-                    onRename={() => setRenameModal({ teamId: team.team_id, teamName: team.team_name })}
-                    onDelete={() => setDeleteModal({ teamId: team.team_id, teamName: team.team_name })}
-                  />
+                  {coachVerified && (
+                    <TeamActionsMenu
+                      onRename={() => setRenameModal({ teamId: team.team_id, teamName: team.team_name })}
+                      onDelete={() => setDeleteModal({ teamId: team.team_id, teamName: team.team_name })}
+                    />
+                  )}
                 </h3>
 
                 <div style={{

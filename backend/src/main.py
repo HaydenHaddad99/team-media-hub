@@ -20,6 +20,7 @@ from handlers.auth_verify import handle_auth_verify
 from handlers.auth_coach_signin import handle_coach_signin
 from handlers.auth_verify_coach import handle_verify_coach
 from handlers.coach_teams import handle_get_coach_teams
+from handlers.coach_verify_access import handle_coach_verify_access
 
 def _route(event: Dict) -> Tuple[str, str]:
     rc = (event.get("requestContext") or {})
@@ -112,6 +113,10 @@ def handler(event: Dict, context: Any) -> Dict:
 
         if method == "GET" and path == "/coach/teams":
             return handle_get_coach_teams(event)
+
+        if method == "POST" and path == "/coach/verify-access":
+            body = _json_body(event)
+            return handle_coach_verify_access(event, body)
 
         if method == "GET" and path == "/media/thumbnail":
             return handle_media_thumbnail(event)
