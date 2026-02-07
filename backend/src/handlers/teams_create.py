@@ -15,8 +15,8 @@ def _now() -> int:
     return int(time.time())
 
 def handle_teams_create(event, body, user_id=None):
-    # Validate setup key if configured
-    if SETUP_KEY:
+    # Validate setup key if configured (skip for logged-in coaches)
+    if SETUP_KEY and not user_id:
         headers = (event or {}).get("headers") or {}
         provided_key = headers.get("x-setup-key") or headers.get("X-Setup-Key") or ""
         if provided_key != SETUP_KEY:
