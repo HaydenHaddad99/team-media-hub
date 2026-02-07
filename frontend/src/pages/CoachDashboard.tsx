@@ -123,30 +123,57 @@ export function CoachDashboard() {
               </p>
             )}
           </div>
-          <button
-            onClick={handleSignOut}
-            style={{
-              padding: "8px 16px",
-              backgroundColor: "#333",
-              color: "#aaa",
-              border: "none",
-              borderRadius: "6px",
-              cursor: "pointer",
-              fontSize: "14px",
-              fontWeight: "500",
-              transition: "all 0.3s ease",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "#444";
-              e.currentTarget.style.color = "#fff";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "#333";
-              e.currentTarget.style.color = "#aaa";
-            }}
-          >
-            Sign Out
-          </button>
+          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+            <button
+              onClick={() => {
+                window.history.pushState({}, "", "/coach/setup-key");
+                window.dispatchEvent(new PopStateEvent("popstate"));
+              }}
+              style={{
+                padding: "8px 16px",
+                backgroundColor: "#00aeff",
+                color: "#000",
+                border: "none",
+                borderRadius: "6px",
+                cursor: "pointer",
+                fontSize: "14px",
+                fontWeight: "600",
+                transition: "all 0.3s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#33beff";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "#00aeff";
+              }}
+            >
+              Create Team
+            </button>
+            <button
+              onClick={handleSignOut}
+              style={{
+                padding: "8px 16px",
+                backgroundColor: "#333",
+                color: "#aaa",
+                border: "none",
+                borderRadius: "6px",
+                cursor: "pointer",
+                fontSize: "14px",
+                fontWeight: "500",
+                transition: "all 0.3s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#444";
+                e.currentTarget.style.color = "#fff";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "#333";
+                e.currentTarget.style.color = "#aaa";
+              }}
+            >
+              Sign Out
+            </button>
+          </div>
         </div>
 
         {error && (
