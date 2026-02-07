@@ -54,7 +54,8 @@ export function RenameTeamModal({
       }
 
       const data = await response.json();
-      onSuccess(data.team_name);
+      const updatedName = data?.team_name || newName.trim();
+      onSuccess(updatedName);
       onClose();
     } catch (ex: any) {
       const message = ex?.message || "Failed to rename team";
