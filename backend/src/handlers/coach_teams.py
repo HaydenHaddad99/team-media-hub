@@ -66,6 +66,10 @@ def handle_get_coach_teams(event):
             team_response = teams_table.get_item(Key={"team_id": team_id})
             team = team_response.get("Item")
             
+            # Skip soft-deleted teams
+            if team and team.get("deleted_at"):
+                continue
+            
             if team:
                 # Try to get invite token from membership first (for coach-created teams)
                 invite_token = membership.get("invite_token")
