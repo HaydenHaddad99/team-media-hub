@@ -128,7 +128,7 @@ def handle_verify_coach(event, body=None):
         try:
             # Query by user_id GSI to find any existing token
             response = tokens_table.query(
-                IndexName="user_id-index",
+                IndexName="user-id-index",
                 KeyConditionExpression="user_id = :uid",
                 ExpressionAttributeValues={":uid": user_id},
             )
