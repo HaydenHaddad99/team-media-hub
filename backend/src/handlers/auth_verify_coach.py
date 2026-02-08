@@ -122,12 +122,36 @@ def handle_verify_coach(event, body=None):
         
         # Store token mapping for future lookups
         tokens_table = dynamodb.Table(os.getenv("TABLE_USER_TOKENS", "UserTokensTable"))
-        tokens_table.put_item(Item={
+        
+        # Check if this user has any existing token with coach_verified flag
+        coach_verified = False
+        try:
+            # Query by user_id GSI to find any existing token
+            response = tokens_table.query(
+                IndexName="user_id-index",
+                KeyConditionExpression="user_id = :uid",
+                ExpressionAttributeValues={":uid": user_id},
+            )
+            existing_tokens = response.get("Items", [])
+            # If any existing token has coach_verified=true, preserve it
+            for token_item in existing_tokens:
+                if token_item.get("coach_verified", False):
+                    coach_verified = True
+                    print(f"✓ Preserving coach_verified=true for user {user_id}")
+                    break
+        except Exception as e:
+            print(f"Could not check existing tokens: {e}")
+        
+        token_item = {
             "token_hash": user_token,
             "user_id": user_id,
             "email": email,
             "created_at": datetime.utcnow().isoformat(),
-        })
+        }
+        if coach_verified:
+            token_item["coach_verified"] = True
+        
+        tokens_table.put_item(Item=token_item)
         
         return ok({
             "user_id": user_id,
