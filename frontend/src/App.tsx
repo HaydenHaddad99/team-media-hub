@@ -20,6 +20,10 @@ export default function App() {
     if (path === "/coach/signin") return "coach-signin";
     if (path === "/coach/verify") return "coach-verify";
     if (path === "/coach/dashboard") return "coach-dashboard";
+    // If opening a team (has invite token + team_id), go to app even if coach is logged in
+    const inviteToken = localStorage.getItem("tmh_invite_token");
+    const teamId = localStorage.getItem("team_id");
+    if (inviteToken && teamId) return "app";
     // If coach is logged in but path is /, redirect to dashboard
     if (localStorage.getItem("tmh_user_token") && path === "/") return "coach-dashboard";
     return "app";
@@ -31,6 +35,8 @@ export default function App() {
     function handlePopState() {
       const path = window.location.pathname;
       const userToken = localStorage.getItem("tmh_user_token");
+      const inviteToken = localStorage.getItem("tmh_invite_token");
+      const teamId = localStorage.getItem("team_id");
       setHasUserToken(!!userToken);
       setHasToken(!!getCurrentToken()); // Re-check invite token when navigating
       
@@ -49,8 +55,13 @@ export default function App() {
       } else if (path === "/coach/dashboard") {
         setCurrentPage("coach-dashboard");
       } else {
-        // Default path: if coach is logged in, go to dashboard, else app
-        setCurrentPage(userToken ? "coach-dashboard" : "app");
+        // Default path: prioritize opening a team over dashboard
+        if (inviteToken && teamId) {
+          setCurrentPage("app");
+        } else {
+          // If coach is logged in without a team open, go to dashboard
+          setCurrentPage(userToken ? "coach-dashboard" : "app");
+        }
       }
     }
 

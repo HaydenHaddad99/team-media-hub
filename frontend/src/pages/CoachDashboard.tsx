@@ -59,19 +59,29 @@ export function CoachDashboard() {
   }
 
   function handleOpenTeam(team: Team) {
+    console.log("[CoachDashboard] Opening team:", {
+      team_id: team.team_id,
+      team_name: team.team_name,
+      invite_token: team.invite_token?.substring(0, 20) + "...",
+    });
+    
     // Store the invite token and team context
     localStorage.setItem("tmh_invite_token", team.invite_token);
     localStorage.setItem("team_id", team.team_id);
+    console.log("[CoachDashboard] Stored invite_token and team_id in localStorage");
+    
     // Keep user_id available so Feed can track uploads properly
     const userToken = localStorage.getItem("tmh_user_token");
     if (userToken) {
       const userId = localStorage.getItem("tmh_user_id");
       if (userId) {
         localStorage.setItem("tmh_coach_user_id", userId);
+        console.log("[CoachDashboard] Stored coach_user_id for upload tracking");
       }
     }
     
     // Navigate to app
+    console.log("[CoachDashboard] Navigating to / to open team feed");
     window.history.pushState({}, "", "/");
     window.dispatchEvent(new PopStateEvent("popstate"));
   }
@@ -295,7 +305,12 @@ export function CoachDashboard() {
                 </div>
 
                 <button
-                  onClick={() => handleOpenTeam(team)}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleOpenTeam(team);
+                  }}
                   style={{
                     width: "100%",
                     padding: "12px",
