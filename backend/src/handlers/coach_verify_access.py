@@ -45,13 +45,16 @@ def handle_coach_verify_access(event, body):
             ExpressionAttributeValues={":verified": True}
         )
         
-        # Audit log
-        write_audit(
-            team_id="system",
-            event="coach_verified",
-            invite_token=None,
-            meta={"user_id": user_id}
-        )
+        # Audit log (non-blocking)
+        try:
+            write_audit(
+                team_id="system",
+                event="coach_verified",
+                invite_token=None,
+                meta={"user_id": user_id}
+            )
+        except Exception as audit_error:
+            print(f"Warning: Audit logging failed: {audit_error}")
         
         return ok({"verified": True}, 200)
     
