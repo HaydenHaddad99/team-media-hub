@@ -99,8 +99,35 @@ export default function App() {
   }
 
   // Coach setup-key flow (authenticated coaches create teams here)
-  if (currentPage === "coach-setup-key") {
-    if (!setupKey) {
+  if (currentPage === "coach-setup-key") {    // For coaches, skip setup key prompt if already verified
+    // The backend will check coach_verified flag when creating team
+    const userToken = localStorage.getItem("tmh_user_token");
+    if (userToken) {
+      // Coach is authenticated, skip setup key prompt
+      return (
+        <div style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "100vh",
+          backgroundColor: "#0f0f1e",
+          color: "#fff",
+          padding: "20px",
+        }}>
+          <CreateTeamForm
+            setupKey=""  // Empty setup key - backend skips validation for verified coaches
+            onCreated={(token) => {
+              localStorage.setItem("tmh_invite_token", token);
+              setHasToken(true);
+              window.history.pushState({}, "", "/");
+              window.dispatchEvent(new PopStateEvent("popstate"));
+              setCurrentPage("app");
+            }}
+          />
+        </div>
+      );
+    }
+    // Not a coach, show setup key prompt    if (!setupKey) {
       return (
         <div style={{
           display: "flex",
