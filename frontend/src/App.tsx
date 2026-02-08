@@ -127,7 +127,8 @@ export default function App() {
         </div>
       );
     }
-    // Not a coach, show setup key prompt    if (!setupKey) {
+    // Not a coach, show setup key prompt
+    if (!setupKey) {
       return (
         <div style={{
           display: "flex",
