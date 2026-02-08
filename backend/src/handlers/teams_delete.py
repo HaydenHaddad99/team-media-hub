@@ -1,7 +1,7 @@
 import os
 import time
 
-from common.config import DYNAMODB, TABLE_TEAMS, TABLE_INVITES
+from common.config import DYNAMODB, TABLE_TEAMS, TABLE_INVITES, TABLE_TEAM_MEMBERS
 from common.db import get_item
 from common.responses import ok, err
 from common.auth import require_invite, require_role
@@ -21,12 +21,33 @@ def handle_teams_delete(event, team_id=None):
             tokens_table = DYNAMODB.Table(os.getenv("TABLE_USER_TOKENS", "UserTokensTable"))
             response = tokens_table.get_item(Key={"token_hash": user_token})
             token_record = response.get("Item")
-            if token_record and not token_record.get("coach_verified", False):
+            if not token_record:
+                return err("Invalid user token", 401, code="unauthorized")
+            if not token_record.get("coach_verified", False):
                 return err("Coach access not verified. Please verify your setup key first.", 403, code="forbidden")
+            
+            # Coach verified - check if they're admin of this team
+            user_id = token_record.get("user_id")
+            team_members_table = DYNAMODB.Table(os.getenv("TABLE_TEAM_MEMBERS", "TeamMembersTable"))
+            try:
+                response = team_members_table.get_item(Key={
+                    "user_id": user_id,
+                    "team_id": team_id
+                })
+                membership = response.get("Item")
+                if not membership or membership.get("role") != "admin":
+                    return err("Insufficient permissions. Only admins can delete teams.", 403, code="forbidden")
+            except Exception as e:
+                print(f"Warning: Failed to check team membership: {e}")
+                return err("Failed to verify permissions", 500, code="server_error")
+            
+            # Coach is admin, proceed with deletion
+            return _delete_team(team_id, event)
         except Exception as e:
-            print(f"Warning: Failed to check coach_verified: {e}")
+            print(f"Error in coach deletion path: {e}")
+            return err("Failed to delete team", 500, code="server_error")
 
-    # Verify user is admin of this team
+    # If no user token, verify user is admin via invite token
     invite, auth_err = require_invite(event)
     if auth_err:
         return auth_err
@@ -38,6 +59,11 @@ def handle_teams_delete(event, team_id=None):
     if role_err:
         return role_err
 
+    return _delete_team(team_id, event)
+
+
+def _delete_team(team_id, event):
+    """Internal function to perform team deletion."""
     try:
         # Get team to verify it exists
         team = get_item(TABLE_TEAMS, {"team_id": team_id})
