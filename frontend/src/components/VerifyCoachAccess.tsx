@@ -33,11 +33,13 @@ export function VerifyCoachAccess({ onVerified }: VerifyCoachAccessProps) {
         }
       );
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const data = await response.json();
         throw new Error(data.error?.message || data.message || "Failed to verify access");
       }
 
+      // Success - call onVerified callback
       onVerified();
     } catch (ex: any) {
       const message = ex?.message || "Failed to verify access";
