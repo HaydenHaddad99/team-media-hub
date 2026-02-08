@@ -80,9 +80,9 @@ export function CoachDashboard() {
       }
     }
     
-    // Navigate to app
-    console.log("[CoachDashboard] Navigating to / to open team feed");
-    window.history.pushState({}, "", "/");
+    // Navigate to team URL
+    console.log(`[CoachDashboard] Navigating to /team/${team.team_id}`);
+    window.history.pushState({}, "", `/team/${team.team_id}`);
     window.dispatchEvent(new PopStateEvent("popstate"));
   }
 

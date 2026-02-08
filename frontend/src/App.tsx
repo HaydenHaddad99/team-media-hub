@@ -24,6 +24,8 @@ export default function App() {
     const inviteToken = localStorage.getItem("tmh_invite_token");
     const teamId = localStorage.getItem("team_id");
     if (inviteToken && teamId) return "app";
+    // Check if path is /team/:teamId
+    if (path.startsWith("/team/")) return "app";
     // If coach is logged in but path is /, redirect to dashboard
     if (localStorage.getItem("tmh_user_token") && path === "/") return "coach-dashboard";
     return "app";
@@ -54,6 +56,14 @@ export default function App() {
         setCurrentPage("coach-verify");
       } else if (path === "/coach/dashboard") {
         setCurrentPage("coach-dashboard");
+      } else if (path.startsWith("/team/")) {
+        // Extract team ID from URL
+        const teamIdFromUrl = path.split("/")[2];
+        if (teamIdFromUrl) {
+          localStorage.setItem("team_id", teamIdFromUrl);
+          console.log("[App] Restored team_id from URL:", teamIdFromUrl);
+        }
+        setCurrentPage("app");
       } else {
         // Default path: prioritize opening a team over dashboard
         if (inviteToken && teamId) {

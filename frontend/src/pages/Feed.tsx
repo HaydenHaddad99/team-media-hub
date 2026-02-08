@@ -203,6 +203,10 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
             <button
               className="btn secondary"
               onClick={() => {
+                // Clear team context when leaving
+                localStorage.removeItem("tmh_invite_token");
+                localStorage.removeItem("team_id");
+                localStorage.removeItem("tmh_coach_user_id");
                 window.history.pushState({}, "", "/coach/dashboard");
                 window.dispatchEvent(new PopStateEvent("popstate"));
               }}
