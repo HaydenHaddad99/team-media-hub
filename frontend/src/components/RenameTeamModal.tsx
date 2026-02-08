@@ -35,14 +35,18 @@ export function RenameTeamModal({
 
     setIsLoading(true);
     try {
-      const token = localStorage.getItem("tmh_invite_token");
+      const userToken = localStorage.getItem("tmh_user_token");
+      if (!userToken) {
+        throw new Error("Not authenticated as coach");
+      }
+
       const response = await fetch(
         `${import.meta.env.VITE_API_BASE_URL}/teams/${teamId}`,
         {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            "x-invite-token": token || "",
+            "x-user-token": userToken,
           },
           body: JSON.stringify({ team_name: newName.trim() }),
         }
