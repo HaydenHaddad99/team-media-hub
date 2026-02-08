@@ -199,7 +199,7 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
           {meErr ? <div className="error">{meErr}</div> : null}
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          {me?.user_id && (
+          {localStorage.getItem("tmh_user_token") && (
             <button
               className="btn secondary"
               onClick={() => {
