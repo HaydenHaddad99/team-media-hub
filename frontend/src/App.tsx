@@ -20,6 +20,8 @@ export default function App() {
     if (path === "/coach/signin") return "coach-signin";
     if (path === "/coach/verify") return "coach-verify";
     if (path === "/coach/dashboard") return "coach-dashboard";
+    // If coach is logged in but path is /, redirect to dashboard
+    if (localStorage.getItem("tmh_user_token") && path === "/") return "coach-dashboard";
     return "app";
   });
   const [setupKey, setSetupKey] = useState<string>("");
@@ -28,7 +30,8 @@ export default function App() {
     // Simple client-side routing
     function handlePopState() {
       const path = window.location.pathname;
-      setHasUserToken(!!localStorage.getItem("tmh_user_token"));
+      const userToken = localStorage.getItem("tmh_user_token");
+      setHasUserToken(!!userToken);
       setHasToken(!!getCurrentToken()); // Re-check invite token when navigating
       
       if (path === "/join") {
@@ -46,7 +49,8 @@ export default function App() {
       } else if (path === "/coach/dashboard") {
         setCurrentPage("coach-dashboard");
       } else {
-        setCurrentPage("app");
+        // Default path: if coach is logged in, go to dashboard, else app
+        setCurrentPage(userToken ? "coach-dashboard" : "app");
       }
     }
 
