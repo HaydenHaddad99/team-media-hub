@@ -14,6 +14,9 @@ import { getRedirectFromLanding, rememberLastTeam } from "./lib/navigation";
 export default function App() {
   const [hasToken, setHasToken] = useState<boolean>(() => !!getCurrentToken());
   const [hasUserToken, setHasUserToken] = useState<boolean>(() => !!localStorage.getItem("tmh_user_token"));
+  const [currentTeamId, setCurrentTeamId] = useState<string>(() => 
+    localStorage.getItem("tmh_current_team_id") || localStorage.getItem("team_id") || ""
+  );
   const [currentPage, setCurrentPage] = useState<string>(() => {
     const path = window.location.pathname;
     if (path === "/join") return "join";
@@ -74,6 +77,7 @@ export default function App() {
           localStorage.setItem("team_id", teamIdFromUrl);
           localStorage.setItem("tmh_current_team_id", teamIdFromUrl);
           rememberLastTeam(teamIdFromUrl);
+          setCurrentTeamId(teamIdFromUrl); // Update state to trigger Feed remount
           console.log("[App] Restored team_id from URL:", teamIdFromUrl);
         }
         setCurrentPage("app");
@@ -291,7 +295,7 @@ export default function App() {
   // App (requires auth)
   return hasToken ? (
     <AppShell currentPage={currentPage} onSignOut={handleGlobalSignOut}>
-      <Feed onLogout={() => setHasToken(false)} />
+      <Feed key={currentTeamId} onLogout={() => setHasToken(false)} />
     </AppShell>
   ) : (
     <LandingPageNew onReady={() => setHasToken(true)} />
