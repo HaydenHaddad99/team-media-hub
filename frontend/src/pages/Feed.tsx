@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import { listMedia, MediaItem, clearStoredToken, getMe, MeResponse, presignDownload, deleteMedia, getUploaderIdentifier } from "../lib/api";
 import { getHomeRoute, navigate } from "../lib/navigation";
 import { UploadButton } from "../components/UploadButton";
@@ -6,6 +7,9 @@ import { MediaGrid } from "../components/MediaGrid";
 import { AdminInvites } from "../components/AdminInvites";
 
 export function Feed({ onLogout }: { onLogout: () => void }) {
+  // Get team_id from URL params
+  const { team_id: urlTeamId } = useParams<{ team_id?: string }>();
+  
   const [items, setItems] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -113,7 +117,13 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
     refresh();
     // Get current user identifier (token hash for parents, user_id for coaches)
     getUploaderIdentifier().then(setCurrentUserId);
-  }, []);
+  }, [urlTeamId]);
+
+  // Reset album filter when switching teams
+  useEffect(() => {
+    setAlbumFilter("all");
+    setSelectedIds(new Set());
+  }, [urlTeamId]);
 
   // If selection mode turns off or items change drastically, ensure selections stay valid
   useEffect(() => {
