@@ -1,5 +1,7 @@
 import React, { ReactNode } from "react";
 import { getHomeRoute, navigate } from "../lib/navigation";
+import { CoachTeamsDropdown } from "./CoachTeamsDropdown";
+import { ParentSwitchTeamMenu } from "./ParentSwitchTeamMenu";
 
 function getContextTitle(hasCoach: boolean, hasParent: boolean, teamName: string | null) {
   if (hasParent && teamName) return teamName;
@@ -18,14 +20,9 @@ export function AppShell({
 }) {
   const hasCoach = !!localStorage.getItem("tmh_user_token");
   const hasParent = !!localStorage.getItem("tmh_invite_token");
-  const teamId = localStorage.getItem("tmh_current_team_id") || localStorage.getItem("team_id");
-  const lastTeamId = localStorage.getItem("tmh_last_team_id");
   const teamName = localStorage.getItem("team_name");
   const roleLabel = hasCoach ? "Coach" : (localStorage.getItem("tmh_role") || "Parent");
 
-  const resolvedTeamId = hasCoach ? (teamId || lastTeamId || "") : (teamId || "");
-  const showTeamLink = hasCoach ? !!resolvedTeamId : !!teamId;
-  const showJoinLink = hasParent && !teamId && !hasCoach;
   const contextTitle = getContextTitle(hasCoach, hasParent, teamName);
 
   return (
@@ -37,21 +34,11 @@ export function AppShell({
           <div className="appNavBadge">{roleLabel}</div>
         </div>
         <div className="appNavLinks">
-          {showTeamLink && resolvedTeamId && (
-            <button
-              className={`appNavLink ${currentPage === "app" ? "active" : ""}`}
-              onClick={() => navigate(`/team/${resolvedTeamId}`)}
-            >
-              Current Team
-            </button>
+          {hasCoach && (
+            <CoachTeamsDropdown />
           )}
-          {showJoinLink && (
-            <button
-              className="appNavLink"
-              onClick={() => navigate("/join")}
-            >
-              Join Team
-            </button>
+          {hasParent && !hasCoach && (
+            <ParentSwitchTeamMenu />
           )}
           <button className="appNavLink danger" onClick={onSignOut}>Sign Out</button>
         </div>
