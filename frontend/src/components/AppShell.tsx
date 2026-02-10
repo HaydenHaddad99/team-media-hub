@@ -1,9 +1,5 @@
 import React, { ReactNode } from "react";
-
-function navigate(path: string) {
-  window.history.pushState({}, "", path);
-  window.dispatchEvent(new PopStateEvent("popstate"));
-}
+import { getHomeRoute, navigate } from "../lib/navigation";
 
 function getContextTitle(hasCoach: boolean, hasParent: boolean, teamName: string | null) {
   if (hasParent && teamName) return teamName;
@@ -33,7 +29,7 @@ export function AppShell({
   return (
     <div className="appShell">
       <nav className="appNav">
-        <button className="appNavBrand" onClick={() => navigate("/")}>TMH</button>
+        <button className="appNavBrand" onClick={() => navigate(getHomeRoute())}>TMH</button>
         <div className="appNavContext">
           <div className="appNavTitle">{contextTitle}</div>
           <div className="appNavBadge">{roleLabel}</div>

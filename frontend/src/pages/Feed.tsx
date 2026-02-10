@@ -212,12 +212,13 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
             <button
               className="btn secondary"
               onClick={() => {
-                // Clear team context when leaving
+                // Clear team context when leaving, but keep last_team_id for coaches
                 localStorage.removeItem("tmh_invite_token");
                 localStorage.removeItem("team_id");
                 localStorage.removeItem("tmh_coach_user_id");
                 localStorage.removeItem("team_name");
                 localStorage.removeItem("tmh_role");
+                // Don't clear tmh_last_team_id - coaches may want to return
                 window.history.pushState({}, "", "/coach/dashboard");
                 window.dispatchEvent(new PopStateEvent("popstate"));
               }}
@@ -232,6 +233,10 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
               localStorage.removeItem("team_id");
               localStorage.removeItem("team_name");
               localStorage.removeItem("tmh_role");
+              // Only clear last_team_id if truly leaving (not a coach)
+              if (!localStorage.getItem("tmh_user_token")) {
+                localStorage.removeItem("tmh_last_team_id");
+              }
               onLogout();
             }}
           >

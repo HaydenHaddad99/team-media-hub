@@ -3,6 +3,7 @@ import { TeamActionsMenu } from "../components/TeamActionsMenu";
 import { RenameTeamModal } from "../components/RenameTeamModal";
 import { DeleteTeamModal } from "../components/DeleteTeamModal";
 import { VerifyCoachAccess } from "../components/VerifyCoachAccess";
+import { rememberLastTeam } from "../lib/navigation";
 
 interface Team {
   team_id: string;
@@ -70,6 +71,7 @@ export function CoachDashboard() {
     localStorage.setItem("team_id", team.team_id);
     localStorage.setItem("team_name", team.team_name);
     localStorage.setItem("tmh_role", team.role);
+    rememberLastTeam(team.team_id);
     console.log("[CoachDashboard] Stored invite_token and team_id in localStorage");
     
     // Keep user_id available so Feed can track uploads properly

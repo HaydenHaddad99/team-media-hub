@@ -9,6 +9,7 @@ import { CreateTeamForm } from "./components/CreateTeamForm";
 import { SetupKeyPrompt } from "./components/SetupKeyPrompt";
 import { AppShell } from "./components/AppShell";
 import { getCurrentToken } from "./lib/api";
+import { getRedirectFromLanding, rememberLastTeam } from "./lib/navigation";
 
 export default function App() {
   const [hasToken, setHasToken] = useState<boolean>(() => !!getCurrentToken());
@@ -32,6 +33,15 @@ export default function App() {
     return "app";
   });
   const [setupKey, setSetupKey] = useState<string>("");
+
+  useEffect(() => {
+    // Redirect authenticated users from "/" to their home
+    const redirectPath = getRedirectFromLanding();
+    if (redirectPath && redirectPath !== "/") {
+      window.history.replaceState({}, "", redirectPath);
+      // Will be handled by popstate below
+    }
+  }, []);
 
   useEffect(() => {
     // Simple client-side routing
@@ -62,8 +72,20 @@ export default function App() {
         const teamIdFromUrl = path.split("/")[2];
         if (teamIdFromUrl) {
           localStorage.setItem("team_id", teamIdFromUrl);
+          rememberLastTeam(teamIdFromUrl);
           console.log("[App] Restored team_id from URL:", teamIdFromUrl);
         }
+        setCurrentPage("app");
+      } else if (path === "/") {
+        // Check if authenticated user should be redirected
+        const redirectPath = getRedirectFromLanding();
+        if (redirectPath && redirectPath !== "/") {
+          window.history.replaceState({}, "", redirectPath);
+          // Trigger another popstate to handle the redirect
+          window.dispatchEvent(new PopStateEvent("popstate"));
+          return;
+        }
+        // Not authenticated, show landing
         setCurrentPage("app");
       } else {
         // Default path: prioritize opening a team over dashboard
@@ -88,11 +110,13 @@ export default function App() {
       localStorage.removeItem("tmh_role");
       localStorage.removeItem("team_name");
       localStorage.removeItem("tmh_coach_user_id");
+      localStorage.removeItem("tmh_last_team_id");
     }
     if (localStorage.getItem("tmh_user_token")) {
       localStorage.removeItem("tmh_user_token");
       localStorage.removeItem("tmh_user_id");
       localStorage.removeItem("coach_signin_email");
+      localStorage.removeItem("tmh_last_team_id");
     }
     window.history.pushState({}, "", "/");
     window.dispatchEvent(new PopStateEvent("popstate"));
