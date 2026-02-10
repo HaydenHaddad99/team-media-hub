@@ -20,18 +20,37 @@ export function CoachTeamsDropdown() {
     setError(null);
 
     const userToken = localStorage.getItem("tmh_user_token");
-    if (!userToken) return;
+    if (!userToken) {
+      setError("No user token found");
+      setLoading(false);
+      return;
+    }
 
-    fetch(`${import.meta.env.VITE_API_BASE_URL || ""}/coach/teams`, {
+    const apiUrl = `${import.meta.env.VITE_API_BASE_URL || ""}/coach/teams`;
+    console.log("[CoachTeamsDropdown] Fetching teams from:", apiUrl);
+    console.log("[CoachTeamsDropdown] Token:", userToken?.substring(0, 20) + "...");
+
+    fetch(apiUrl, {
       headers: { "x-user-token": userToken },
     })
-      .then((res) => res.json())
+      .then((res) => {
+        console.log("[CoachTeamsDropdown] Response status:", res.status);
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+        return res.json();
+      })
       .then((data) => {
+        console.log("[CoachTeamsDropdown] Teams loaded:", data.teams);
         setTeams(data.teams || []);
+        if (!data.teams || data.teams.length === 0) {
+          setError("No teams found");
+        }
       })
       .catch((err) => {
-        setError("Failed to load teams");
-        console.error(err);
+        console.error("[CoachTeamsDropdown] Fetch error:", err);
+        setError(err.message || "Failed to load teams");
+        setTeams([]);
       })
       .finally(() => {
         setLoading(false);
