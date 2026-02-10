@@ -17,6 +17,11 @@ export function Landing({ onReady }: { onReady: () => void }) {
   const [setupKey, setSetupKey] = useState<string>(() => localStorage.getItem("tmh_setup_key") || "");
   const [showCreateTeam, setShowCreateTeam] = useState(false);
 
+  // Token detection for "Continue where you left off"
+  const hasCoach = !!localStorage.getItem("tmh_user_token");
+  const hasParent = !!localStorage.getItem("tmh_invite_token");
+  const teamId = localStorage.getItem("team_id");
+
   useEffect(() => {
     const urlToken = getTokenFromUrl();
     if (urlToken) {
@@ -34,6 +39,60 @@ export function Landing({ onReady }: { onReady: () => void }) {
     const stored = getCurrentToken();
     if (stored) onReady();
   }, [onReady]);
+
+  // If user has tokens, show "Continue" view instead of marketing landing
+  if (hasCoach || hasParent) {
+    return (
+      <div className="container">
+        <header className="header">
+          <div className="brand">Team Media Hub</div>
+          <div className="sub">Private, invite-only team photo/video sharing</div>
+        </header>
+
+        <div className="panel">
+          <h2 style={{ marginTop: 0 }}>Welcome back!</h2>
+          <p className="muted" style={{ marginBottom: 24 }}>Continue where you left off</p>
+
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            {hasCoach && (
+              <button
+                className="btn primary"
+                onClick={() => {
+                  window.history.pushState({}, "", "/coach/dashboard");
+                  window.dispatchEvent(new PopStateEvent("popstate"));
+                }}
+                style={{ fontSize: "1.05rem", padding: "0.7rem 1.5rem" }}
+              >
+                → Go to Coach Dashboard
+              </button>
+            )}
+            {hasParent && teamId && (
+              <button
+                className="btn primary"
+                onClick={() => {
+                  window.history.pushState({}, "", `/team/${teamId}`);
+                  window.dispatchEvent(new PopStateEvent("popstate"));
+                }}
+                style={{ fontSize: "1.05rem", padding: "0.7rem 1.5rem" }}
+              >
+                → Open Team Gallery
+              </button>
+            )}
+          </div>
+
+          <div style={{ marginTop: 24, paddingTop: 24, borderTop: "1px solid #333" }}>
+            <p className="muted" style={{ fontSize: "0.9rem" }}>Or continue signing in below...</p>
+          </div>
+        </div>
+
+        <footer className="footer muted">
+          For demos: share a single invite link in TeamSnap/SportsEngine chat.
+        </footer>
+      </div>
+    );
+  }
+
+  // Anonymous user - show marketing landing
 
   function saveManual() {
     const t = token.trim();
@@ -64,7 +123,7 @@ export function Landing({ onReady }: { onReady: () => void }) {
       </header>
 
       <div className="panel">
-        <h2 style={{ marginTop: 0 }}>A private place for your team's photos & videos</h2>
+        <h2 style={{ marginTop: 0 }}>A private place for your team&apos;s photos &amp; videos</h2>
 
         <ul className="muted" style={{ marginTop: 8 }}>
           <li>Invite-only access</li>
