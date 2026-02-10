@@ -72,6 +72,7 @@ export default function App() {
         const teamIdFromUrl = path.split("/")[2];
         if (teamIdFromUrl) {
           localStorage.setItem("team_id", teamIdFromUrl);
+          localStorage.setItem("tmh_current_team_id", teamIdFromUrl);
           rememberLastTeam(teamIdFromUrl);
           console.log("[App] Restored team_id from URL:", teamIdFromUrl);
         }
@@ -107,6 +108,7 @@ export default function App() {
     if (hasInviteToken) {
       localStorage.removeItem("tmh_invite_token");
       localStorage.removeItem("team_id");
+      localStorage.removeItem("tmh_current_team_id");
       localStorage.removeItem("tmh_role");
       localStorage.removeItem("team_name");
       localStorage.removeItem("tmh_coach_user_id");

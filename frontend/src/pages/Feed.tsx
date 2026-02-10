@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { listMedia, MediaItem, clearStoredToken, getMe, MeResponse, presignDownload, deleteMedia, getUploaderIdentifier } from "../lib/api";
+import { getHomeRoute, navigate } from "../lib/navigation";
 import { UploadButton } from "../components/UploadButton";
 import { MediaGrid } from "../components/MediaGrid";
 import { AdminInvites } from "../components/AdminInvites";
@@ -94,6 +95,7 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
       setMe(res);
       if (res?.team?.team_id) {
         localStorage.setItem("team_id", res.team.team_id);
+        localStorage.setItem("tmh_current_team_id", res.team.team_id);
       }
       if (res?.team?.team_name) {
         localStorage.setItem("team_name", res.team.team_name);
@@ -208,36 +210,26 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
           {meErr ? <div className="error">{meErr}</div> : null}
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          {localStorage.getItem("tmh_user_token") && (
-            <button
-              className="btn secondary"
-              onClick={() => {
-                // Clear team context when leaving, but keep last_team_id for coaches
-                localStorage.removeItem("tmh_invite_token");
-                localStorage.removeItem("team_id");
-                localStorage.removeItem("tmh_coach_user_id");
-                localStorage.removeItem("team_name");
-                localStorage.removeItem("tmh_role");
-                // Don't clear tmh_last_team_id - coaches may want to return
-                window.history.pushState({}, "", "/coach/dashboard");
-                window.dispatchEvent(new PopStateEvent("popstate"));
-              }}
-            >
-              Back to Dashboard
-            </button>
-          )}
           <button
             className="btn"
             onClick={() => {
-              clearStoredToken();
+              const isCoach = !!localStorage.getItem("tmh_user_token");
+
+              // Clear team context (not auth tokens)
               localStorage.removeItem("team_id");
+              localStorage.removeItem("tmh_current_team_id");
               localStorage.removeItem("team_name");
               localStorage.removeItem("tmh_role");
-              // Only clear last_team_id if truly leaving (not a coach)
-              if (!localStorage.getItem("tmh_user_token")) {
-                localStorage.removeItem("tmh_last_team_id");
+
+              if (isCoach) {
+                // Coaches leave team context but keep coach session
+                clearStoredToken();
+                localStorage.removeItem("tmh_coach_user_id");
+                onLogout();
               }
-              onLogout();
+
+              // Parents keep invite token; route to signed-in home
+              navigate(getHomeRoute());
             }}
           >
             Leave

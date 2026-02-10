@@ -18,12 +18,14 @@ export function AppShell({
 }) {
   const hasCoach = !!localStorage.getItem("tmh_user_token");
   const hasParent = !!localStorage.getItem("tmh_invite_token");
-  const teamId = localStorage.getItem("team_id");
+  const teamId = localStorage.getItem("tmh_current_team_id") || localStorage.getItem("team_id");
+  const lastTeamId = localStorage.getItem("tmh_last_team_id");
   const teamName = localStorage.getItem("team_name");
   const roleLabel = hasCoach ? "Coach" : (localStorage.getItem("tmh_role") || "Parent");
 
-  const showTeamLink = hasParent && !!teamId;
-  const isCoachPage = currentPage.startsWith("coach-");
+  const resolvedTeamId = hasCoach ? (teamId || lastTeamId || "") : (teamId || "");
+  const showTeamLink = hasCoach ? !!resolvedTeamId : !!teamId;
+  const showJoinLink = hasParent && !teamId && !hasCoach;
   const contextTitle = getContextTitle(hasCoach, hasParent, teamName);
 
   return (
@@ -35,20 +37,20 @@ export function AppShell({
           <div className="appNavBadge">{roleLabel}</div>
         </div>
         <div className="appNavLinks">
-          {hasCoach && (
-            <button
-              className={`appNavLink ${isCoachPage ? "active" : ""}`}
-              onClick={() => navigate("/coach/dashboard")}
-            >
-              Dashboard
-            </button>
-          )}
-          {showTeamLink && teamId && (
+          {showTeamLink && resolvedTeamId && (
             <button
               className={`appNavLink ${currentPage === "app" ? "active" : ""}`}
-              onClick={() => navigate(`/team/${teamId}`)}
+              onClick={() => navigate(`/team/${resolvedTeamId}`)}
             >
               Current Team
+            </button>
+          )}
+          {showJoinLink && (
+            <button
+              className="appNavLink"
+              onClick={() => navigate("/join")}
+            >
+              Join Team
             </button>
           )}
           <button className="appNavLink danger" onClick={onSignOut}>Sign Out</button>

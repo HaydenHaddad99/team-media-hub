@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { request } from "../lib/api";
+import { navigate, rememberLastTeam } from "../lib/navigation";
 
 export function JoinTeam() {
   const [step, setStep] = useState<"email" | "verify">("email");
@@ -48,12 +49,14 @@ export function JoinTeam() {
         }),
       });
 
-      // Store session
+      // Store session and team context
       localStorage.setItem("tmh_invite_token", res.session_token);
       localStorage.setItem("team_id", res.team_id);
+      localStorage.setItem("tmh_current_team_id", res.team_id);
+      rememberLastTeam(res.team_id);
 
-      // Redirect to app
-      window.location.href = "/";
+      // Redirect to team feed (client-side navigation)
+      navigate(`/team/${res.team_id}`);
     } catch (err: any) {
       setError(err.message || "Invalid code");
     } finally {
