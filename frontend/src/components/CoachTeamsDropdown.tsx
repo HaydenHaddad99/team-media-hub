@@ -4,6 +4,7 @@ import { navigate } from "../lib/navigation";
 interface Team {
   team_id: string;
   team_name: string;
+  invite_token?: string;
 }
 
 export function CoachTeamsDropdown() {
@@ -57,11 +58,17 @@ export function CoachTeamsDropdown() {
       });
   }
 
-  function handleTeamClick(teamId: string, teamName: string) {
+  function handleTeamClick(teamId: string, teamName: string, inviteToken?: string) {
+    // Store team context
     localStorage.setItem("tmh_current_team_id", teamId);
     localStorage.setItem("team_id", teamId);
     localStorage.setItem("team_name", teamName);
     localStorage.setItem("tmh_last_team_id", teamId);
+    
+    // UPDATE: Store the admin invite token for this team so API calls use the correct team
+    if (inviteToken) {
+      localStorage.setItem("tmh_invite_token", inviteToken);
+    }
 
     navigate(`/team/${teamId}`);
     setOpen(false);
@@ -125,7 +132,7 @@ export function CoachTeamsDropdown() {
           {teams.map((team) => (
             <button
               key={team.team_id}
-              onClick={() => handleTeamClick(team.team_id, team.team_name)}
+              onClick={() => handleTeamClick(team.team_id, team.team_name, team.invite_token)}
               style={{
                 display: "block",
                 width: "100%",
