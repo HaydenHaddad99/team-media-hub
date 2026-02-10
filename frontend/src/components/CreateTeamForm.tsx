@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-export function CreateTeamForm({ setupKey, onCreated }: { setupKey: string; onCreated: (token: string) => void }) {
+export function CreateTeamForm({ setupKey, onCreated, onCancel }: { setupKey: string; onCreated: (token: string) => void; onCancel?: () => void }) {
   const [teamName, setTeamName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -104,6 +104,11 @@ export function CreateTeamForm({ setupKey, onCreated }: { setupKey: string; onCr
         <button className="btn primary" onClick={handleCreate} disabled={loading}>
           {loading ? "Creating…" : "Create"}
         </button>
+        {onCancel && (
+          <button className="btn" onClick={onCancel} disabled={loading} style={{ marginLeft: "8px" }}>
+            Cancel
+          </button>
+        )}
       </div>
       {error && <div style={{ color: "#ff4444", fontSize: "0.9rem" }}>{error}</div>}
     </div>

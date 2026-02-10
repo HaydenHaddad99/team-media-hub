@@ -148,6 +148,11 @@ export default function App() {
               window.dispatchEvent(new PopStateEvent("popstate"));
               setCurrentPage("app");
             }}
+            onCancel={() => {
+              window.history.pushState({}, "", "/coach/dashboard");
+              window.dispatchEvent(new PopStateEvent("popstate"));
+              setCurrentPage("coach-dashboard");
+            }}
           />
         </div>
       );
