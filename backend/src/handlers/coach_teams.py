@@ -18,9 +18,15 @@ def handle_get_coach_teams(event):
     Headers: x-user-token
     Returns: { teams: [{ team_id, team_name, role, invite_token }] }
     """
-    user_token = event.get("headers", {}).get("x-user-token", "").strip()
+    headers = event.get("headers", {})
+    print(f"[coach_teams] Headers keys: {list(headers.keys())}")
+    
+    user_token = headers.get("x-user-token") or headers.get("X-User-Token") or ""
+    user_token = user_token.strip() if user_token else ""
+    
     if not user_token:
-        print("[coach_teams] No user token provided")
+        print("[coach_teams] ✗ No user token provided")
+        print(f"[coach_teams] Headers present: {list(headers.keys())}")
         return err("User token required", status_code=401)
     
     print(f"[coach_teams] Looking up token: {user_token[:20]}...")
@@ -28,11 +34,22 @@ def handle_get_coach_teams(event):
     try:
         # Look up user by token
         tokens_table = dynamodb.Table(os.getenv("TABLE_USER_TOKENS", "UserTokensTable"))
+        print(f"[coach_teams] UserTokensTable: {os.getenv('TABLE_USER_TOKENS', 'UserTokensTable')}")
+        print(f"[coach_teams] Token key being used: {user_token}")
+        
         response = tokens_table.get_item(Key={"token_hash": user_token})
+        print(f"[coach_teams] GetItem response: {response}")
+        
         token_record = response.get("Item")
         
         if not token_record:
-            print(f"[coach_teams] Token not found")
+            print(f"[coach_teams] ✗ Token not found in DB")
+            print(f"[coach_teams] Attempting scan to debug...")
+            try:
+                scan_response = tokens_table.scan(Limit=5)
+                print(f"[coach_teams] Sample tokens in table: {[item.get('token_hash', 'NO_HASH')[:20] for item in scan_response.get('Items', [])]}")
+            except Exception as e:
+                print(f"[coach_teams] Scan failed: {e}")
             return err("Invalid token", status_code=401)
         
         print(f"[coach_teams] ✓ Token found, user_id: {token_record.get('user_id')}")
