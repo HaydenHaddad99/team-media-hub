@@ -92,6 +92,15 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
       setMeErr(null);
       const res = await getMe();
       setMe(res);
+      if (res?.team?.team_id) {
+        localStorage.setItem("team_id", res.team.team_id);
+      }
+      if (res?.team?.team_name) {
+        localStorage.setItem("team_name", res.team.team_name);
+      }
+      if (res?.invite?.role) {
+        localStorage.setItem("tmh_role", res.invite.role);
+      }
     } catch (ex: any) {
       setMeErr(ex?.message || "Failed to load team info");
     }
@@ -207,6 +216,8 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
                 localStorage.removeItem("tmh_invite_token");
                 localStorage.removeItem("team_id");
                 localStorage.removeItem("tmh_coach_user_id");
+                localStorage.removeItem("team_name");
+                localStorage.removeItem("tmh_role");
                 window.history.pushState({}, "", "/coach/dashboard");
                 window.dispatchEvent(new PopStateEvent("popstate"));
               }}
@@ -218,6 +229,9 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
             className="btn"
             onClick={() => {
               clearStoredToken();
+              localStorage.removeItem("team_id");
+              localStorage.removeItem("team_name");
+              localStorage.removeItem("tmh_role");
               onLogout();
             }}
           >

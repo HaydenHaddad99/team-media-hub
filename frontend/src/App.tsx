@@ -7,6 +7,7 @@ import { CoachVerify } from "./pages/CoachVerify";
 import { CoachDashboard } from "./pages/CoachDashboard";
 import { CreateTeamForm } from "./components/CreateTeamForm";
 import { SetupKeyPrompt } from "./components/SetupKeyPrompt";
+import { AppShell } from "./components/AppShell";
 import { getCurrentToken } from "./lib/api";
 
 export default function App() {
@@ -79,6 +80,26 @@ export default function App() {
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
+  function handleGlobalSignOut() {
+    const hasInviteToken = !!localStorage.getItem("tmh_invite_token");
+    if (hasInviteToken) {
+      localStorage.removeItem("tmh_invite_token");
+      localStorage.removeItem("team_id");
+      localStorage.removeItem("tmh_role");
+      localStorage.removeItem("team_name");
+      localStorage.removeItem("tmh_coach_user_id");
+    }
+    if (localStorage.getItem("tmh_user_token")) {
+      localStorage.removeItem("tmh_user_token");
+      localStorage.removeItem("tmh_user_id");
+      localStorage.removeItem("coach_signin_email");
+    }
+    window.history.pushState({}, "", "/");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    setHasToken(false);
+    setHasUserToken(false);
+  }
+
   // Join page (no auth required)
   if (currentPage === "join") {
     return <JoinTeam />;
@@ -120,7 +141,11 @@ export default function App() {
 
   // Coach dashboard
   if (currentPage === "coach-dashboard") {
-    return <CoachDashboard />;
+    return (
+      <AppShell currentPage={currentPage} onSignOut={handleGlobalSignOut}>
+        <CoachDashboard />
+      </AppShell>
+    );
   }
 
   // Coach setup-key flow (authenticated coaches create teams here)
@@ -130,17 +155,60 @@ export default function App() {
     if (userToken) {
       // Coach is authenticated, skip setup key prompt
       return (
+        <AppShell currentPage={currentPage} onSignOut={handleGlobalSignOut}>
+          <div style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            minHeight: "calc(100vh - 64px)",
+            padding: "20px",
+          }}>
+            <CreateTeamForm
+              setupKey=""  // Empty setup key - backend skips validation for verified coaches
+              onCreated={(token) => {
+                localStorage.setItem("tmh_invite_token", token);
+                setHasToken(true);
+                window.history.pushState({}, "", "/");
+                window.dispatchEvent(new PopStateEvent("popstate"));
+                setCurrentPage("app");
+              }}
+              onCancel={() => {
+                window.history.pushState({}, "", "/coach/dashboard");
+                window.dispatchEvent(new PopStateEvent("popstate"));
+                setCurrentPage("coach-dashboard");
+              }}
+            />
+          </div>
+        </AppShell>
+      );
+    }
+    // Not a coach, show setup key prompt
+    if (!setupKey) {
+      return (
+        <AppShell currentPage={currentPage} onSignOut={handleGlobalSignOut}>
+          <div style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            minHeight: "calc(100vh - 64px)",
+            padding: "20px",
+          }}>
+            <SetupKeyPrompt onSubmit={(key) => setSetupKey(key)} />
+          </div>
+        </AppShell>
+      );
+    }
+    return (
+      <AppShell currentPage={currentPage} onSignOut={handleGlobalSignOut}>
         <div style={{
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          minHeight: "100vh",
-          backgroundColor: "#0f0f1e",
-          color: "#fff",
+          minHeight: "calc(100vh - 64px)",
           padding: "20px",
         }}>
           <CreateTeamForm
-            setupKey=""  // Empty setup key - backend skips validation for verified coaches
+            setupKey={setupKey}
             onCreated={(token) => {
               localStorage.setItem("tmh_invite_token", token);
               setHasToken(true);
@@ -148,51 +216,9 @@ export default function App() {
               window.dispatchEvent(new PopStateEvent("popstate"));
               setCurrentPage("app");
             }}
-            onCancel={() => {
-              window.history.pushState({}, "", "/coach/dashboard");
-              window.dispatchEvent(new PopStateEvent("popstate"));
-              setCurrentPage("coach-dashboard");
-            }}
           />
         </div>
-      );
-    }
-    // Not a coach, show setup key prompt
-    if (!setupKey) {
-      return (
-        <div style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          minHeight: "100vh",
-          backgroundColor: "#0f0f1e",
-          color: "#fff",
-        }}>
-          <SetupKeyPrompt onSubmit={(key) => setSetupKey(key)} />
-        </div>
-      );
-    }
-    return (
-      <div style={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        minHeight: "100vh",
-        backgroundColor: "#0f0f1e",
-        color: "#fff",
-        padding: "20px",
-      }}>
-        <CreateTeamForm
-          setupKey={setupKey}
-          onCreated={(token) => {
-            localStorage.setItem("tmh_invite_token", token);
-            setHasToken(true);
-            window.history.pushState({}, "", "/");
-            window.dispatchEvent(new PopStateEvent("popstate"));
-            setCurrentPage("app");
-          }}
-        />
-      </div>
+      </AppShell>
     );
   }
 
@@ -238,7 +264,9 @@ export default function App() {
 
   // App (requires auth)
   return hasToken ? (
-    <Feed onLogout={() => setHasToken(false)} />
+    <AppShell currentPage={currentPage} onSignOut={handleGlobalSignOut}>
+      <Feed onLogout={() => setHasToken(false)} />
+    </AppShell>
   ) : (
     <LandingPageNew onReady={() => setHasToken(true)} />
   );

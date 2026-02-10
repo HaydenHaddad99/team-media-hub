@@ -68,6 +68,8 @@ export function CoachDashboard() {
     // Store the invite token and team context
     localStorage.setItem("tmh_invite_token", team.invite_token);
     localStorage.setItem("team_id", team.team_id);
+    localStorage.setItem("team_name", team.team_name);
+    localStorage.setItem("tmh_role", team.role);
     console.log("[CoachDashboard] Stored invite_token and team_id in localStorage");
     
     // Keep user_id available so Feed can track uploads properly
@@ -83,15 +85,6 @@ export function CoachDashboard() {
     // Navigate to team URL
     console.log(`[CoachDashboard] Navigating to /team/${team.team_id}`);
     window.history.pushState({}, "", `/team/${team.team_id}`);
-    window.dispatchEvent(new PopStateEvent("popstate"));
-  }
-
-  function handleSignOut() {
-    localStorage.removeItem("tmh_user_token");
-    localStorage.removeItem("tmh_user_id");
-    localStorage.removeItem("coach_signin_email");
-    
-    window.history.pushState({}, "", "/");
     window.dispatchEvent(new PopStateEvent("popstate"));
   }
 
@@ -167,30 +160,6 @@ export function CoachDashboard() {
               }}
             >
               Create Team
-            </button>
-            <button
-              onClick={handleSignOut}
-              style={{
-                padding: "8px 16px",
-                backgroundColor: "#333",
-                color: "#aaa",
-                border: "none",
-                borderRadius: "6px",
-                cursor: "pointer",
-                fontSize: "14px",
-                fontWeight: "500",
-                transition: "all 0.3s ease",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = "#444";
-                e.currentTarget.style.color = "#fff";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "#333";
-                e.currentTarget.style.color = "#aaa";
-              }}
-            >
-              Sign Out
             </button>
           </div>
         </div>
