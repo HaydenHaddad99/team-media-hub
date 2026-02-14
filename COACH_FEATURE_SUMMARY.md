@@ -182,8 +182,8 @@ Parent flow (unchanged):
 ## Deployment Status
 
 ✅ All changes deployed to production
-- API: https://5gt1117eh5.execute-api.us-east-1.amazonaws.com/
-- Frontend: https://d2u8ibdrwf4t7.cloudfront.net/
+- API: https://5gt1117eh5.execute-api.us-east-1.amazonaws.com/ (or custom API domain if configured)
+- Frontend: https://app.teammediahub.co/
 - CloudFront Distribution: d2u8ibdrwf4t7.cloudfront.net (ID: E17AEGO4NNV2ME)
 
 Last deployment: 2026-02-02

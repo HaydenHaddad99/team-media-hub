@@ -31,6 +31,7 @@ Copy `.env` and update as needed:
 
 ```
 VITE_API_URL=https://5gt1117eh5.execute-api.us-east-1.amazonaws.com
+# Or use custom API domain: https://api.teammediahub.co (if configured)
 ```
 
 ## Testing

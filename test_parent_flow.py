@@ -14,7 +14,7 @@ import hashlib
 import requests
 from urllib.parse import urljoin
 
-BASE_URL = os.environ.get("API_URL", "https://d2u8ibdrwf4t7.cloudfront.net")
+BASE_URL = os.environ.get("API_URL", "https://app.teammediahub.co")
 
 # Use a test parent token (from a team invite)
 PARENT_TOKEN = os.environ.get("TEST_PARENT_TOKEN", "")

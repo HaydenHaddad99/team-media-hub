@@ -9,6 +9,6 @@
     "MAX_UPLOAD_BYTES": "314572800",
     "ALLOWED_CONTENT_TYPES": "image/jpeg,image/png,image/heic,video/mp4,video/quicktime",
     "SETUP_KEY": "my-secret-setup-key-12345",
-    "FRONTEND_BASE_URL": "https://d23f0eycmgsiz6.cloudfront.net"
+    "FRONTEND_BASE_URL": "https://app.teammediahub.co"
   }
 }

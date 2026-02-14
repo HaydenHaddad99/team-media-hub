@@ -68,7 +68,7 @@
 # Set environment variables with a test parent token and team
 export TEST_PARENT_TOKEN="your_invite_token_here"
 export TEST_TEAM_ID="your_team_id_here"
-export API_URL="https://d2u8ibdrwf4t7.cloudfront.net"
+export API_URL="https://app.teammediahub.co"
 
 # Run test script
 cd /Users/haydensmac/team-media-hub

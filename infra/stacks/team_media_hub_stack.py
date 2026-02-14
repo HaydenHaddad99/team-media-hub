@@ -80,7 +80,7 @@ class TeamMediaHubStack(Stack):
                         s3.HttpMethods.PUT,
                         s3.HttpMethods.POST,
                     ],
-                    allowed_origins=["*"],  # tighten to CloudFront domain if desired
+                    allowed_origins=["https://app.teammediahub.co"],  # Custom domain
                     allowed_headers=["*"],
                     exposed_headers=["ETag", "x-amz-version-id", "Content-Type", "Content-Length"],
                     max_age=3600,
@@ -270,7 +270,7 @@ class TeamMediaHubStack(Stack):
                     apigwv2.CorsHttpMethod.DELETE,
                     apigwv2.CorsHttpMethod.OPTIONS,
                 ],
-                allow_origins=["*"],  # tighten after you know your CloudFront domain
+                allow_origins=["https://app.teammediahub.co"],  # Custom domain
                 max_age=Duration.days(10),
             ),
         )
@@ -386,7 +386,8 @@ class TeamMediaHubStack(Stack):
         )
 
         # Now that we have a stable site URL, make backend return real invite URLs
-        api_fn.add_environment("FRONTEND_BASE_URL", f"https://{distribution.domain_name}")
+        # Use custom domain instead of CloudFront URL
+        api_fn.add_environment("FRONTEND_BASE_URL", "https://app.teammediahub.co")
 
         # Upload the built frontend assets from ../frontend/dist
         # IMPORTANT: build frontend before `cdk deploy`
