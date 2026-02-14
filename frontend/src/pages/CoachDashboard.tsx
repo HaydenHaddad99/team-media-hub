@@ -222,7 +222,12 @@ export function CoachDashboard() {
             gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
             gap: "20px",
           }}>
-            {teams.map((team) => (
+            {/* Check if roles differ across teams */}
+            {(() => {
+              const uniqueRoles = new Set(teams.map(t => t.role));
+              const hasMultipleRoles = uniqueRoles.size > 1;
+              
+              return teams.map((team) => (
               <div
                 key={team.team_id}
                 style={{
@@ -250,7 +255,23 @@ export function CoachDashboard() {
                   justifyContent: "space-between",
                   alignItems: "center",
                 }}>
-                  <span>{team.team_name}</span>
+                  <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    {team.team_name}
+                    {hasMultipleRoles && (
+                      <span style={{
+                        fontSize: "10px",
+                        padding: "2px 6px",
+                        backgroundColor: "rgba(0, 174, 255, 0.15)",
+                        color: "#00aeff",
+                        borderRadius: "4px",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.5px",
+                        fontWeight: "600",
+                      }}>
+                        {team.role}
+                      </span>
+                    )}
+                  </span>
                   {coachVerified && (
                     <TeamActionsMenu
                       onRename={() => setRenameModal({ teamId: team.team_id, teamName: team.team_name })}
@@ -258,22 +279,6 @@ export function CoachDashboard() {
                     />
                   )}
                 </h3>
-
-                <div style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: "16px",
-                }}>
-                  <span style={{
-                    fontSize: "13px",
-                    color: "#666",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px",
-                  }}>
-                    Role: {team.role}
-                  </span>
-                </div>
 
                 <button
                   type="button"
@@ -306,7 +311,8 @@ export function CoachDashboard() {
                   Open Team
                 </button>
               </div>
-            ))}
+              ));
+            })()}
           </div>
         )}
 
