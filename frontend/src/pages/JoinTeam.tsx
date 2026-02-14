@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { request } from "../lib/api";
 import { navigate, rememberLastTeam } from "../lib/navigation";
+import { PublicNav } from "../components/PublicNav";
 
 export function JoinTeam() {
   const [step, setStep] = useState<"email" | "verify">("email");
@@ -64,54 +65,50 @@ export function JoinTeam() {
     }
   }
 
-  if (step === "verify") {
-    return (
-      <div className="container" style={{ maxWidth: 480, margin: "80px auto", padding: 24 }}>
-        <h1 style={{ fontSize: 28, marginBottom: 12 }}>Check Your Email</h1>
-        <p style={{ color: "#888", marginBottom: 32 }}>
-          We sent a 6-digit code to <strong>{email}</strong>
-        </p>
+  const content = step === "verify" ? (
+    <div className="container" style={{ maxWidth: 480, margin: "80px auto", padding: 24 }}>
+      <h1 style={{ fontSize: 28, marginBottom: 12 }}>Check Your Email</h1>
+      <p style={{ color: "#888", marginBottom: 32 }}>
+        We sent a 6-digit code to <strong>{email}</strong>
+      </p>
 
-        <form onSubmit={handleVerify}>
-          <div className="form-group">
-            <label>Verification Code</label>
-            <input
-              type="text"
-              className="input"
-              placeholder="123456"
-              value={verificationCode}
-              onChange={(e) => setVerificationCode(e.target.value)}
-              maxLength={6}
-              pattern="[0-9]{6}"
-              autoFocus
-              required
-            />
+      <form onSubmit={handleVerify}>
+        <div className="form-group">
+          <label>Verification Code</label>
+          <input
+            type="text"
+            className="input"
+            placeholder="123456"
+            value={verificationCode}
+            onChange={(e) => setVerificationCode(e.target.value)}
+            maxLength={6}
+            pattern="[0-9]{6}"
+            autoFocus
+            required
+          />
+        </div>
+
+        {error && (
+          <div className="alert alert-error" style={{ marginBottom: 16 }}>
+            {error}
           </div>
+        )}
 
-          {error && (
-            <div className="alert alert-error" style={{ marginBottom: 16 }}>
-              {error}
-            </div>
-          )}
+        <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: "100%", marginBottom: 12 }}>
+          {loading ? "Verifying..." : `Join ${teamName}`}
+        </button>
 
-          <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: "100%", marginBottom: 12 }}>
-            {loading ? "Verifying..." : `Join ${teamName}`}
-          </button>
-
-          <button
-            type="button"
-            className="btn"
-            onClick={() => setStep("email")}
-            style={{ width: "100%" }}
-          >
-            Back
-          </button>
-        </form>
-      </div>
-    );
-  }
-
-  return (
+        <button
+          type="button"
+          className="btn"
+          onClick={() => setStep("email")}
+          style={{ width: "100%" }}
+        >
+          Back
+        </button>
+      </form>
+    </div>
+  ) : (
     <div className="container" style={{ maxWidth: 480, margin: "80px auto", padding: 24 }}>
       <h1 style={{ fontSize: 28, marginBottom: 12 }}>Join Team</h1>
       <p style={{ color: "#888", marginBottom: 32 }}>
@@ -156,6 +153,13 @@ export function JoinTeam() {
           {loading ? "Sending..." : "Continue"}
         </button>
       </form>
+    </div>
+  );
+
+  return (
+    <div>
+      <PublicNav />
+      {content}
     </div>
   );
 }

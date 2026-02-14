@@ -142,10 +142,6 @@ export default function App() {
         minHeight: "100vh",
         backgroundColor: "#0f0f1e",
         color: "#fff",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "20px",
       }}>
         <CoachSignIn />
       </div>
