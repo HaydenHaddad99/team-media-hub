@@ -4,7 +4,6 @@ import { listMedia, MediaItem, clearStoredToken, getMe, MeResponse, presignDownl
 import { getHomeRoute, navigate } from "../lib/navigation";
 import { UploadButton } from "../components/UploadButton";
 import { MediaGrid } from "../components/MediaGrid";
-import { AdminInvites } from "../components/AdminInvites";
 
 export function Feed({ onLogout }: { onLogout: () => void }) {
   // Get team_id from URL params
@@ -37,7 +36,7 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
     : items.filter(i => (i.album_name || "All uploads") === albumFilter);
 
   // Calculate storage usage (soft limit for pricing story)
-  const STORAGE_LIMIT_GB = 5;
+  const STORAGE_LIMIT_GB = 20;
   const totalBytes = items.reduce((sum, item) => sum + (item.size_bytes || 0), 0);
   const usedGB = totalBytes / (1024 * 1024 * 1024);
   const usagePercent = Math.min(100, (usedGB / STORAGE_LIMIT_GB) * 100);
@@ -212,9 +211,17 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
           <div className="sub">
             Media feed · role: <b>{role}</b>
           </div>
-          {isAdmin && me?.team?.team_code ? (
-            <div className="sub" style={{ marginTop: 6 }}>
-              Team code: <b>{me.team.team_code}</b>
+          {me?.team?.team_code ? (
+            <div style={{ marginTop: 12, padding: 12, background: "rgba(255,255,255,0.04)", borderRadius: 8, maxWidth: 400 }}>
+              <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
+                Team code
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: 1.5, marginBottom: 6 }}>
+                {me.team.team_code}
+              </div>
+              <div className="muted" style={{ fontSize: 12 }}>
+                Parents can join using this code.
+              </div>
             </div>
           ) : null}
           {meErr ? <div className="error">{meErr}</div> : null}
@@ -345,8 +352,6 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
             ) : null}
           </>
         )}
-
-        {isAdmin && teamId ? <AdminInvites teamId={teamId} teamCode={me?.team?.team_code} /> : null}
       </div>
 
       {selectMode && selectedIds.size > 0 ? (
