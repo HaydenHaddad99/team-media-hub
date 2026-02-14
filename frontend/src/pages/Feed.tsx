@@ -207,15 +207,12 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
     <div className="container">
       <header className="header rowBetween">
         <div>
-          <div className="brand">{me?.team?.team_name || "Team Media Hub"}</div>
+          <div className="brand">Team Code</div>
           <div className="sub">
-            Media feed · role: <b>{role}</b>
+            Role: <b>{role}</b>
           </div>
           {me?.team?.team_code ? (
             <div style={{ marginTop: 12, padding: 12, background: "rgba(255,255,255,0.04)", borderRadius: 8, maxWidth: 400 }}>
-              <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-                Team code
-              </div>
               <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: 1.5, marginBottom: 6 }}>
                 {me.team.team_code}
               </div>
@@ -223,7 +220,11 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
                 Parents can join using this code.
               </div>
             </div>
-          ) : null}
+          ) : (
+            <div className="muted" style={{ marginTop: 12 }}>
+              Team code not available.
+            </div>
+          )}
           {meErr ? <div className="error">{meErr}</div> : null}
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
