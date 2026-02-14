@@ -21,10 +21,12 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
   const [me, setMe] = useState<MeResponse | null>(null);
   const [meErr, setMeErr] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [showLeaveModal, setShowLeaveModal] = useState<boolean>(false);
 
   const role = me?.invite?.role || "viewer";
   const canUpload = role === "uploader" || role === "admin";
   const isAdmin = role === "admin";
+  const isCoach = !!localStorage.getItem("tmh_user_token");
   const teamId = me?.team?.team_id || "";
 
   // Get unique albums from items
@@ -139,6 +141,37 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
     if (next.size !== selectedIds.size) setSelectedIds(next);
   }, [filteredItems]);
 
+  function handleExitTeam() {
+    const isCoach = !!localStorage.getItem("tmh_user_token");
+    
+    if (isCoach) {
+      // Coaches: Exit team view and return to dashboard
+      // Clear only team context, keep coach session
+      localStorage.removeItem("team_id");
+      localStorage.removeItem("tmh_current_team_id");
+      localStorage.removeItem("team_name");
+      localStorage.removeItem("tmh_role");
+      localStorage.removeItem("tmh_invite_token");
+      localStorage.removeItem("tmh_coach_user_id");
+      
+      navigate("/coach/dashboard");
+    } else {
+      // Parents: Show confirmation modal
+      setShowLeaveModal(true);
+    }
+  }
+
+  function confirmLeaveTeam() {
+    // Clear team context but keep parent's invite token for potential other teams
+    localStorage.removeItem("team_id");
+    localStorage.removeItem("tmh_current_team_id");
+    localStorage.removeItem("team_name");
+    localStorage.removeItem("tmh_role");
+    
+    setShowLeaveModal(false);
+    navigate(getHomeRoute());
+  }
+
   function toggleSelect(item: MediaItem) {
     setSelectedIds(prev => {
       const next = new Set(prev);
@@ -230,27 +263,9 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <button
             className="btn"
-            onClick={() => {
-              const isCoach = !!localStorage.getItem("tmh_user_token");
-
-              // Clear team context (not auth tokens)
-              localStorage.removeItem("team_id");
-              localStorage.removeItem("tmh_current_team_id");
-              localStorage.removeItem("team_name");
-              localStorage.removeItem("tmh_role");
-
-              if (isCoach) {
-                // Coaches leave team context but keep coach session
-                clearStoredToken();
-                localStorage.removeItem("tmh_coach_user_id");
-                onLogout();
-              }
-
-              // Parents keep invite token; route to signed-in home
-              navigate(getHomeRoute());
-            }}
+            onClick={handleExitTeam}
           >
-            Leave
+            {isCoach ? "Exit Team" : "Leave Team"}
           </button>
         </div>
       </header>
@@ -384,6 +399,56 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
       <footer className="footer muted">
         Team Media Hub: Private, invite-only sharing for youth sports — built for parents, not social networks.
       </footer>
+
+      {/* Leave Team Confirmation Modal (Parents only) */}
+      {showLeaveModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.8)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={() => setShowLeaveModal(false)}
+        >
+          <div
+            style={{
+              backgroundColor: "#1a1a2e",
+              padding: "32px",
+              borderRadius: "12px",
+              maxWidth: "400px",
+              width: "90%",
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: "0 0 16px 0", color: "#fff" }}>Leave Team?</h3>
+            <p style={{ margin: "0 0 24px 0", color: "#aaa", lineHeight: 1.6 }}>
+              Are you sure you want to leave this team? You will no longer see its media.
+            </p>
+            <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+              <button
+                className="btn"
+                onClick={() => setShowLeaveModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn danger"
+                onClick={confirmLeaveTeam}
+              >
+                Leave Team
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
