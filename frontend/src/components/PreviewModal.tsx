@@ -1,11 +1,13 @@
 import React, { useEffect, useState, useRef } from "react";
+import useEmblaCarousel from "embla-carousel-react";
+import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { MediaItem, presignDownload } from "../lib/api";
 
 type Props = {
   open: boolean;
   items: MediaItem[];
   currentIndex: number;
-  onNavigate: (direction: 1 | -1) => void;
+  onSelectIndex: (index: number) => void;
   canDelete?: boolean;
   currentUserId?: string | null;
   userRole?: string;
@@ -25,7 +27,7 @@ export function PreviewModal({
   open,
   items,
   currentIndex,
-  onNavigate,
+  onSelectIndex,
   canDelete,
   currentUserId,
   userRole,
@@ -33,17 +35,26 @@ export function PreviewModal({
   deleting,
   onClose,
 }: Props) {
-  const [url, setUrl] = useState<string>("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [mediaLoaded, setMediaLoaded] = useState(false);
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState<number>(currentIndex);
+  const [mediaUrls, setMediaUrls] = useState<Record<string, string>>({});
+  const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
+  const [loadedIds, setLoadedIds] = useState<Set<string>>(new Set());
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [dragOffsetY, setDragOffsetY] = useState(0);
   const prefetchingRef = useRef<Set<string>>(new Set());
+  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    loop: false,
+    align: "center",
+    skipSnaps: false,
+    dragFree: false,
+    containScroll: "trimSnaps",
+  });
 
-  const currentItem = items[currentIndex];
-  const hasPrev = currentIndex > 0;
-  const hasNext = currentIndex < items.length - 1;
+  const currentItem = items[selectedIndex] || items[currentIndex];
+  const hasPrev = selectedIndex > 0;
+  const hasNext = selectedIndex < items.length - 1;
+  const isCurrentLoading = !!currentItem && loadingIds.has(currentItem.media_id);
 
   // Determine if current user can delete this item
   // Admin/coach can delete anything; parents can only delete their own uploads
@@ -59,136 +70,114 @@ export function PreviewModal({
     return currentItem.uploader_user_id === currentUserId;
   })();
 
-  // Minimum swipe distance (in px) to trigger navigation
-  const minSwipeDistance = 50;
+  function setLoading(mediaId: string, next: boolean) {
+    setLoadingIds((prev) => {
+      const updated = new Set(prev);
+      if (next) updated.add(mediaId);
+      else updated.delete(mediaId);
+      return updated;
+    });
+  }
 
-  // Prefetch adjacent items
+  function markLoaded(mediaId: string) {
+    setLoadedIds((prev) => {
+      if (prev.has(mediaId)) return prev;
+      const updated = new Set(prev);
+      updated.add(mediaId);
+      return updated;
+    });
+  }
+
+  function setUrlFor(mediaId: string, url: string) {
+    setMediaUrls((prev) => (prev[mediaId] ? prev : { ...prev, [mediaId]: url }));
+  }
+
+  async function resolveUrl(item: MediaItem) {
+    const mediaId = item.media_id;
+    if (mediaUrls[mediaId]) return;
+    if (urlCache.has(mediaId)) {
+      setUrlFor(mediaId, urlCache.get(mediaId) as string);
+      return;
+    }
+
+    if (item.preview_url && !isVideo(item.content_type)) {
+      urlCache.set(mediaId, item.preview_url);
+      setUrlFor(mediaId, item.preview_url);
+      return;
+    }
+
+    if (prefetchingRef.current.has(mediaId)) return;
+
+    prefetchingRef.current.add(mediaId);
+    setLoading(mediaId, true);
+    try {
+      const { download_url } = await presignDownload(mediaId);
+      urlCache.set(mediaId, download_url);
+      setUrlFor(mediaId, download_url);
+      if (!isVideo(item.content_type)) {
+        const img = new Image();
+        img.src = download_url;
+        await img.decode().catch(() => {});
+      }
+    } catch (ex) {
+      console.error("Failed to load media", mediaId, ex);
+    } finally {
+      prefetchingRef.current.delete(mediaId);
+      setLoading(mediaId, false);
+    }
+  }
+
   useEffect(() => {
-    async function prefetchUrl(item: MediaItem) {
-      const mediaId = item.media_id;
-      if (urlCache.has(mediaId) || prefetchingRef.current.has(mediaId)) return;
-      
-      // If preview_url already available, cache it immediately
-      if (item.preview_url && !isVideo(item.content_type)) {
-        urlCache.set(mediaId, item.preview_url);
-        return;
-      }
-      
-      // Otherwise fetch presigned URL
-      prefetchingRef.current.add(mediaId);
-      try {
-        const { download_url } = await presignDownload(mediaId);
-        urlCache.set(mediaId, download_url);
-      } catch (ex) {
-        console.error("Failed to prefetch", mediaId, ex);
-      } finally {
-        prefetchingRef.current.delete(mediaId);
-      }
-    }
-
-    if (open && items.length > 1) {
-      // Prefetch next
-      if (hasNext) {
-        prefetchUrl(items[currentIndex + 1]);
-      }
-      // Prefetch prev
-      if (hasPrev) {
-        prefetchUrl(items[currentIndex - 1]);
-      }
-    }
-  }, [open, currentIndex, items, hasNext, hasPrev]);
+    if (!open || !items.length) return;
+    if (currentItem) resolveUrl(currentItem);
+    if (hasNext) resolveUrl(items[selectedIndex + 1]);
+    if (hasPrev) resolveUrl(items[selectedIndex - 1]);
+  }, [open, selectedIndex, items, hasNext, hasPrev]);
 
   useEffect(() => {
-    async function loadUrl() {
-      if (!currentItem) {
-        setUrl("");
-        setIsLoading(false);
-        setMediaLoaded(false);
-        return;
-      }
-      
-      setIsLoading(true);
-      setMediaLoaded(false);
-      
-      // Check cache first
-      const cached = urlCache.get(currentItem.media_id);
-      if (cached) {
-        setUrl(cached);
-        setIsLoading(false);
-        return;
-      }
-      
-      // Use preview_url if available (images only, already presigned from list)
-      if (currentItem.preview_url && !isVideo(currentItem.content_type)) {
-        urlCache.set(currentItem.media_id, currentItem.preview_url);
-        setUrl(currentItem.preview_url);
-        setIsLoading(false);
-        return;
-      }
-      
-      setUrl(""); // Clear old URL immediately to prevent flash
-      
-      try {
-        const { download_url } = await presignDownload(currentItem.media_id);
-        urlCache.set(currentItem.media_id, download_url);
-        
-        // Optional: Pre-decode image for smoother transition
-        if (!isVideo(currentItem.content_type)) {
-          const img = new Image();
-          img.src = download_url;
-          await img.decode().catch(() => {}); // Ignore decode errors
-        }
-        
-        setUrl(download_url);
-      } catch (ex) {
-        console.error("Failed to load media", ex);
-        setUrl("");
-      } finally {
-        setIsLoading(false);
-      }
-    }
+    if (!emblaApi || !open) return;
+    emblaApi.scrollTo(currentIndex, true);
+    setSelectedIndex(currentIndex);
+  }, [emblaApi, currentIndex, open]);
 
-    if (open && currentItem) {
-      loadUrl();
-    }
-  }, [open, currentItem?.media_id]);
+  useEffect(() => {
+    if (!emblaApi) return;
+    const onSelect = () => {
+      const idx = emblaApi.selectedScrollSnap();
+      setSelectedIndex(idx);
+      onSelectIndex(idx);
+    };
+    emblaApi.on("select", onSelect);
+    return () => {
+      emblaApi.off("select", onSelect);
+    };
+  }, [emblaApi, onSelectIndex]);
+
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    setDragOffsetY(0);
+    swipeStartRef.current = null;
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
-      if (e.key === "ArrowLeft" && hasPrev) onNavigate(-1);
-      if (e.key === "ArrowRight" && hasNext) onNavigate(1);
+      if (e.key === "ArrowLeft" && emblaApi) emblaApi.scrollPrev();
+      if (e.key === "ArrowRight" && emblaApi) emblaApi.scrollNext();
     }
     if (open) window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose, hasPrev, hasNext, onNavigate]);
-
-  const onTouchStart = (e: React.TouchEvent) => {
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
-  };
-
-  const onTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientX);
-  };
-
-  const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-    
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > minSwipeDistance;
-    const isRightSwipe = distance < -minSwipeDistance;
-    
-    if (isLeftSwipe && hasNext) {
-      onNavigate(1);
-    }
-    if (isRightSwipe && hasPrev) {
-      onNavigate(-1);
-    }
-  };
+  }, [open, onClose, emblaApi]);
 
   async function handleDownload() {
-    if (!currentItem || !url) return;
+    if (!currentItem) return;
+    const url = mediaUrls[currentItem.media_id] || currentItem.preview_url || "";
+    if (!url) return;
     
     try {
       setDownloadingId(currentItem.media_id);
@@ -203,107 +192,140 @@ export function PreviewModal({
 
   if (!open || !currentItem) return null;
 
+  function handleSwipeStart(e: React.TouchEvent) {
+    if (e.touches.length !== 1) return;
+    swipeStartRef.current = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY,
+    };
+  }
+
+  function handleSwipeMove(e: React.TouchEvent) {
+    if (!swipeStartRef.current) return;
+    const dx = e.touches[0].clientX - swipeStartRef.current.x;
+    const dy = e.touches[0].clientY - swipeStartRef.current.y;
+    if (dy > 0 && Math.abs(dy) > Math.abs(dx)) {
+      setDragOffsetY(Math.min(dy, 240));
+    }
+  }
+
+  function handleSwipeEnd() {
+    if (dragOffsetY > 120) {
+      onClose();
+    }
+    setDragOffsetY(0);
+    swipeStartRef.current = null;
+  }
+
   return (
     <div className="modalOverlay" role="dialog" aria-modal="true" onClick={onClose}>
-      <div 
-        className="modalCard" 
+      <div
+        className="modalCard"
         onClick={(e) => e.stopPropagation()}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
+        onTouchStart={handleSwipeStart}
+        onTouchMove={handleSwipeMove}
+        onTouchEnd={handleSwipeEnd}
+        style={{
+          transform: dragOffsetY ? `translateY(${dragOffsetY}px)` : undefined,
+          transition: dragOffsetY ? "none" : "transform 0.2s ease",
+        }}
       >
         <div className="modalHeader">
           <div style={{ display: "flex", gap: 8 }}>
             {items.length > 1 && (
               <div className="muted" style={{ fontSize: 13 }}>
-                {currentIndex + 1} / {items.length}
+                {selectedIndex + 1} / {items.length}
               </div>
             )}
             <button className="btn" onClick={onClose}>Close</button>
           </div>
         </div>
 
-        <div className="modalBody" style={{ position: "relative", minHeight: 400, display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.6) 100%)" }}>
-          {/* Base layer: Always show thumbnail immediately for images */}
-          {!isVideo(currentItem.content_type) && currentItem.thumb_url && (
-            <img 
-              className="modalMedia modalMedia-placeholder"
-              alt="" 
-              src={currentItem.thumb_url}
-              style={{
-                position: "absolute",
-                filter: "blur(10px)",
-                transform: "scale(1.1)",
-                opacity: 0.7
-              }}
-            />
-          )}
-          
-          {/* Loading spinner (subtle, centered) */}
-          {(isLoading || (url && !mediaLoaded)) && (
-            <div style={{
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-              zIndex: 2,
-              textAlign: "center"
-            }}>
-              <div className="spinner" />
-              <div style={{ marginTop: 12, fontSize: 13, color: "rgba(255,255,255,0.7)" }}>
-                Loading…
-              </div>
+        <div className="modalBody" style={{ position: "relative", minHeight: 400, background: "linear-gradient(135deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.6) 100%)" }}>
+          <div className="embla" ref={emblaRef}>
+            <div className="embla__container">
+              {items.map((item, idx) => {
+                const mediaId = item.media_id;
+                const url = mediaUrls[mediaId] || (item.preview_url && !isVideo(item.content_type) ? item.preview_url : "");
+                const isCurrent = idx === selectedIndex;
+                const isLoading = loadingIds.has(mediaId) && isCurrent;
+                const isLoaded = loadedIds.has(mediaId);
+                return (
+                  <div className={`embla__slide ${idx === selectedIndex ? "embla__slide--selected" : ""}`} key={mediaId}>
+                    <div className="embla__slide__inner">
+                      {!isVideo(item.content_type) && item.thumb_url && (
+                        <img
+                          className="modalMedia modalMedia-placeholder"
+                          alt=""
+                          src={item.thumb_url}
+                        />
+                      )}
+
+                      {isLoading && (
+                        <div className="modalSpinner">
+                          <div className="spinner" />
+                          <div className="modalSpinnerText">Loading…</div>
+                        </div>
+                      )}
+
+                      {url ? (
+                        isVideo(item.content_type) ? (
+                          isCurrent ? (
+                            <video
+                              className={`modalMedia ${isLoaded ? "modalMedia-loaded" : ""}`}
+                              controls
+                              playsInline
+                              src={url}
+                              onLoadedData={() => markLoaded(mediaId)}
+                            />
+                          ) : (
+                            <div className="modalMedia modalMedia-loaded" />
+                          )
+                        ) : (
+                          <TransformWrapper
+                            key={mediaId}
+                            minScale={1}
+                            maxScale={3}
+                            doubleClick={{ mode: "toggle", step: 2 }}
+                            pinch={{ step: 5 }}
+                            wheel={{ step: 0.2 }}
+                          >
+                            <TransformComponent>
+                              <img
+                                className={`modalMedia ${isLoaded ? "modalMedia-loaded" : ""}`}
+                                alt=""
+                                src={url}
+                                onLoad={() => markLoaded(mediaId)}
+                              />
+                            </TransformComponent>
+                          </TransformWrapper>
+                        )
+                      ) : (
+                        !isLoading && (
+                          <div className="modalError">Failed to load media</div>
+                        )
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          )}
-          
-          {/* Full-res media (fades in when loaded) */}
-          {url && (
-            isVideo(currentItem.content_type) ? (
-              <video 
-                key={`video-${currentItem.media_id}`}
-                className={`modalMedia ${mediaLoaded ? 'modalMedia-loaded' : ''}`}
-                controls 
-                playsInline 
-                src={url}
-                onLoadedData={() => setMediaLoaded(true)}
-                style={{ position: "relative", zIndex: 1 }}
-              />
-            ) : (
-              <img 
-                key={`img-${currentItem.media_id}`}
-                className={`modalMedia ${mediaLoaded ? 'modalMedia-loaded' : ''}`}
-                alt="" 
-                src={url}
-                onLoad={() => setMediaLoaded(true)}
-                style={{ position: "relative", zIndex: 1 }}
-              />
-            )
-          )}
-          
-          {/* Error state */}
-          {!isLoading && !url && (
-            <div style={{ 
-              color: "rgba(255,255,255,0.6)",
-              fontSize: 14
-            }}>
-              Failed to load media
-            </div>
-          )}
-          
+          </div>
+
           {hasPrev && (
             <button
               className="carouselBtn carouselBtnPrev"
-              onClick={(e) => { e.stopPropagation(); onNavigate(-1); }}
+              onClick={(e) => { e.stopPropagation(); emblaApi?.scrollPrev(); }}
               aria-label="Previous"
             >
               ‹
             </button>
           )}
-          
+
           {hasNext && (
             <button
               className="carouselBtn carouselBtnNext"
-              onClick={(e) => { e.stopPropagation(); onNavigate(1); }}
+              onClick={(e) => { e.stopPropagation(); emblaApi?.scrollNext(); }}
               aria-label="Next"
             >
               ›
@@ -314,7 +336,7 @@ export function PreviewModal({
         <div className="modalFooter">
           <div className="row" style={{ gap: 10 }}>
             {canDeleteItem && onDelete ? (
-              <button className="btn btn-danger" onClick={onDelete} disabled={!!deleting || isLoading}>
+              <button className="btn btn-danger" onClick={onDelete} disabled={!!deleting || isCurrentLoading}>
                 {deleting ? "Deleting…" : "Delete"}
               </button>
             ) : canDelete && !canDeleteItem ? (
@@ -325,9 +347,13 @@ export function PreviewModal({
             <button 
               className="btn btn-primary" 
               onClick={handleDownload}
-              disabled={!url || downloadingId === currentItem.media_id || isLoading}
+              disabled={!mediaUrls[currentItem.media_id] || downloadingId === currentItem.media_id || loadingIds.has(currentItem.media_id)}
             >
-              {isLoading ? "Loading…" : downloadingId === currentItem.media_id ? "Downloading…" : "Download"}
+              {loadingIds.has(currentItem.media_id)
+                ? "Loading…"
+                : downloadingId === currentItem.media_id
+                  ? "Downloading…"
+                  : "Download"}
             </button>
           </div>
         </div>

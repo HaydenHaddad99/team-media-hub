@@ -44,11 +44,11 @@ export function MediaGrid({
     });
   }
 
-  function navigateCarousel(direction: 1 | -1) {
+  function setCarouselIndex(nextIndex: number) {
     setPreview(prev => {
-      const newIndex = prev.currentIndex + direction;
-      if (newIndex < 0 || newIndex >= items.length) return prev;
-      return { ...prev, currentIndex: newIndex };
+      if (nextIndex < 0 || nextIndex >= items.length) return prev;
+      if (nextIndex === prev.currentIndex) return prev;
+      return { ...prev, currentIndex: nextIndex };
     });
   }
 
@@ -127,7 +127,7 @@ export function MediaGrid({
         open={preview.open}
         items={items}
         currentIndex={preview.currentIndex}
-        onNavigate={navigateCarousel}
+        onSelectIndex={setCarouselIndex}
         canDelete={!!canDelete}
         deleting={deleting}
         onDelete={handleDelete}
