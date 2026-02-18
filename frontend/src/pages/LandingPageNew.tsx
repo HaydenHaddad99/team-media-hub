@@ -26,27 +26,17 @@ export function LandingPageNew({ onReady }: LandingPageNewProps) {
     {
       title: "Your team's photos in one place",
       description: "Clean grid view. Browse by date. Find what matters.",
-      image: "/screenshots/grid.png",
+      image: "/screenshots/p1.png",
     },
     {
       title: "Parents upload from their phone",
       description: "One button. Select photos. Done. No complicated folders.",
-      image: "/screenshots/upload.png",
+      image: "/screenshots/p2.png",
     },
     {
       title: "Private and secure",
       description: "Only your team sees photos. No algorithms. No ads. No social media drama.",
-      image: "/screenshots/private.png",
-    },
-    {
-      title: "Download anytime",
-      description: "Parents download individual photos or entire events. Forever.",
-      image: "/screenshots/download.png",
-    },
-    {
-      title: "Works perfect on phones",
-      description: "Built for mobile. Fast. Simple. Your way.",
-      image: "/screenshots/mobile.png",
+      image: "/screenshots/p3.png",
     },
   ];
 
@@ -84,9 +74,7 @@ export function LandingPageNew({ onReady }: LandingPageNewProps) {
           {screenshots.map((screenshot, idx) => (
             <div key={idx} className="screenshot-card">
               <div className="screenshot-image">
-                <div className="placeholder-image">
-                  <div className="placeholder-text">{screenshot.title}</div>
-                </div>
+                <img src={screenshot.image} alt={screenshot.title} />
               </div>
               <h3>{screenshot.title}</h3>
               <p>{screenshot.description}</p>
