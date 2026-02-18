@@ -45,27 +45,38 @@ def handle_media_delete(event):
     if role == "uploader":
         uploader_user_id = item.get("uploader_user_id")
         
-        # Determine current user's identifier
-        # Priority 1: Explicit user_id (from user-token or coach header)
-        # Priority 2: Hash of current invite token (for parent sharing)
+        # Determine current user's identifier (multiple formats for compatibility)
+        # Priority 1: Explicit user_id (from authenticated user via email/verify flow)
+        # Priority 2: Coach user_id from header
+        # Priority 3: Hash of current invite token (for backwards compatibility)
         current_user_id = invite.get("user_id")
+        current_token_hash = None
+        
         if not current_user_id:
             headers = event.get("headers") or {}
             current_user_id = headers.get("x-coach-user-id") or headers.get("X-Coach-User-Id")
-        if not current_user_id:
-            # Hash the current token
-            raw_token = invite.get("_raw_token")
-            if raw_token:
-                current_user_id = _token_hash(raw_token)
-                print(f"[DELETE] Computed user_id from token hash: {current_user_id[:16]}...")
-            else:
-                print(f"[DELETE] ERROR: No raw_token in invite!")
         
-        print(f"[DELETE] Ownership check: uploader_id={uploader_user_id[:16] if uploader_user_id else None}..., current_id={current_user_id[:16] if current_user_id else None}...")
+        # Always compute token hash for comparison (handles legacy uploads)
+        raw_token = invite.get("_raw_token")
+        if raw_token:
+            current_token_hash = _token_hash(raw_token)
+            print(f"[DELETE] Token hash computed: {current_token_hash[:16]}...")
         
-        # If this upload has an owner and it's not the current user, deny
-        if uploader_user_id and uploader_user_id != current_user_id:
-            print(f"[DELETE] DENIED: uploader_id {uploader_user_id[:16]}... != current_id {current_user_id[:16] if current_user_id else None}...")
+        print(f"[DELETE] Ownership check: uploader_id={uploader_user_id[:16] if uploader_user_id else None}..., current_user_id={current_user_id[:16] if current_user_id else None}..., token_hash={current_token_hash[:16] if current_token_hash else None}...")
+        
+        # Check if user owns this upload
+        # Match either by user_id OR token hash (for backwards compatibility)
+        owns_upload = False
+        if uploader_user_id:
+            if current_user_id and uploader_user_id == current_user_id:
+                owns_upload = True
+                print(f"[DELETE] Match via user_id")
+            elif current_token_hash and uploader_user_id == current_token_hash:
+                owns_upload = True
+                print(f"[DELETE] Match via token_hash")
+        
+        if uploader_user_id and not owns_upload:
+            print(f"[DELETE] DENIED: uploader_id {uploader_user_id[:16]}... doesn't match current_user_id or token_hash")
             return err("You can only delete your own uploads.", 403, code="forbidden")
         
         # If upload has no owner (old uploads before accounts), only admin can delete

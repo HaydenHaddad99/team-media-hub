@@ -58,20 +58,23 @@ def handle_media_complete(event, body):
     }
     
     # Store uploader_user_id for ownership tracking:
-    # Priority 1: User auth (user_id from direct user tokens or coach accessing via invite)
-    # Priority 2: Invite token hash (for parents using shared invite links)
+    # Priority 1: User auth (user_id from authenticated users via email/verify flow)
+    # Priority 2: Coach user_id passed in header when coach opens team
+    # Priority 3: Invite token hash (for backwards compatibility with legacy invite-only auth)
     user_id = invite.get("user_id")
+    
     if not user_id:
         # Check for coach user_id passed in header when coach opens team with invite token
         headers = event.get("headers") or {}
         user_id = headers.get("x-coach-user-id") or headers.get("X-Coach-User-Id")
     
     if not user_id:
-        # For parents using invite tokens, hash the token to create a stable identifier
+        # For legacy invite-only users, hash the token to create a stable identifier
+        # NOTE: New users created via email/verify flow will have a proper user_id
         raw_token = invite.get("_raw_token")
         if raw_token:
             user_id = _token_hash(raw_token)
-            print(f"[UPLOAD] Parent token hashed: {user_id[:16]}...")
+            print(f"[UPLOAD] Legacy invite token hashed: {user_id[:16]}...")
         else:
             print(f"[UPLOAD] ERROR: No _raw_token in invite!")
     else:
