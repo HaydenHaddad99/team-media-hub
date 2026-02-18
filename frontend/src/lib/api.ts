@@ -19,7 +19,8 @@ export function clearStoredToken() {
 /**
  * Get the current uploader's identifier (user_id or token hash)
  * - For coaches: their tmh_coach_user_id
- * - For parents: SHA256 hash of their invite token (stable identifier per parent)
+ * - For authenticated parents (email/verify): their tmh_user_id
+ * - For legacy invite-only parents: SHA256 hash of their invite token
  */
 export async function getUploaderIdentifier(): Promise<string | null> {
   // Check if this is a coach
@@ -28,7 +29,13 @@ export async function getUploaderIdentifier(): Promise<string | null> {
     return coachUserId;
   }
 
-  // For parents, hash their invite token
+  // Check if this is an authenticated parent (email/verify flow)
+  const userId = localStorage.getItem("tmh_user_id");
+  if (userId) {
+    return userId;
+  }
+
+  // For legacy invite-only parents, hash their invite token
   const token = getStoredToken();
   if (!token) {
     return null;

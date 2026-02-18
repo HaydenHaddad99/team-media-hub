@@ -41,7 +41,7 @@ export function JoinTeam() {
     setLoading(true);
 
     try {
-      const res = await request<{session_token: string; team_id: string}>("/auth/verify", {
+      const res = await request<{session_token: string; team_id: string; user_id: string; team_name?: string}>("/auth/verify", {
         method: "POST",
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
@@ -54,6 +54,10 @@ export function JoinTeam() {
       localStorage.setItem("tmh_invite_token", res.session_token);
       localStorage.setItem("team_id", res.team_id);
       localStorage.setItem("tmh_current_team_id", res.team_id);
+      localStorage.setItem("tmh_user_id", res.user_id);
+      if (res.team_name) {
+        localStorage.setItem("team_name", res.team_name);
+      }
       rememberLastTeam(res.team_id);
 
       // Redirect to team feed (client-side navigation)

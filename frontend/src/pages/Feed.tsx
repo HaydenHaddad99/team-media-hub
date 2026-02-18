@@ -108,6 +108,10 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
       if (res?.invite?.role) {
         localStorage.setItem("tmh_role", res.invite.role);
       }
+      // Store user_id if available (for authenticated parents who joined via email/verify)
+      if ((res as any)?.user_id) {
+        localStorage.setItem("tmh_user_id", (res as any).user_id);
+      }
     } catch (ex: any) {
       setMeErr(ex?.message || "Failed to load team info");
     }

@@ -19,7 +19,7 @@ def handle_me(event):
 
         write_audit(team_id, "me", invite_token=invite.get("_raw_token"))
 
-        return ok({
+        response = {
             "team": {
                 "team_id": team_id,
                 "team_name": team.get("team_name", "Team"),
@@ -29,7 +29,14 @@ def handle_me(event):
                 "role": invite.get("role", "viewer"),
                 "expires_at": invite.get("expires_at"),
             }
-        })
+        }
+        
+        # Include user_id if available (for authenticated parents who joined via email/verify)
+        user_id = invite.get("user_id")
+        if user_id:
+            response["user_id"] = user_id
+        
+        return ok(response)
     
     # Try user-token auth (coach/authenticated users)
     user_record, user_err = get_user_from_token(event)
