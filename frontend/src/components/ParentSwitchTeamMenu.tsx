@@ -31,6 +31,7 @@ export function ParentSwitchTeamMenu() {
             border: "1px solid rgba(255, 255, 255, 0.12)",
             borderRadius: 8,
             minWidth: 180,
+            maxWidth: "min(220px, calc(100vw - 32px))",
             zIndex: 50,
             boxShadow: "0 4px 12px rgba(0, 0, 0, 0.4)",
           }}

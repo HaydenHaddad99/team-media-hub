@@ -5,13 +5,21 @@
   color-scheme: dark;
   color: rgba(255, 255, 255, 0.92);
   background: #0b0f17;
+  /* Prevent iOS text size adjust */
+  -webkit-text-size-adjust: 100%;
 }
 
-* { box-sizing: border-box; }
+* { 
+  box-sizing: border-box;
+  /* Prevent double-tap zoom on buttons/clickable elements */
+  touch-action: manipulation;
+}
 
-body {
+html, body {
   margin: 0;
   min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 .container {
@@ -62,15 +70,18 @@ body {
   background: rgba(255,255,255,0.06);
   color: inherit;
   outline: none;
+  font-size: 16px;
 }
 
 .btn {
-  padding: 10px 12px;
+  padding: 12px 12px;
+  min-height: 44px;
   border-radius: 12px;
   border: 1px solid rgba(255,255,255,0.18);
   background: rgba(255,255,255,0.08);
   color: inherit;
   cursor: pointer;
+  font-size: 16px;
 }
 
 .btn:disabled {
@@ -202,10 +213,11 @@ body {
 }
 
 .appShell {
-  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   background: #0b0f17;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .appNav {
@@ -217,6 +229,9 @@ body {
   justify-content: space-between;
   gap: 16px;
   padding: 12px 16px;
+  padding-top: max(12px, env(safe-area-inset-top));
+  padding-left: max(16px, env(safe-area-inset-left));
+  padding-right: max(16px, env(safe-area-inset-right));
   background: rgba(9, 12, 20, 0.92);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(10px);
@@ -264,10 +279,12 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.06);
   color: inherit;
-  padding: 8px 12px;
+  padding: 10px 12px;
+  min-height: 44px;
   border-radius: 10px;
   cursor: pointer;
   font-weight: 600;
+  font-size: 16px;
 }
 
 .appNavLink.active {
@@ -300,12 +317,14 @@ body {
   }
 }
 .select {
-  padding: 8px 10px;
+  padding: 12px 12px;
+  min-height: 44px;
   border-radius: 12px;
   border: 1px solid rgba(255,255,255,0.15);
   background: rgba(255,255,255,0.06);
   color: inherit;
   outline: none;
+  font-size: 16px;
 }
 
 .modalOverlay {
@@ -316,12 +335,14 @@ body {
   align-items: center;
   justify-content: center;
   padding: 14px;
+  padding-bottom: max(14px, env(safe-area-inset-bottom));
   z-index: 1000;
+  overflow-y: auto;
 }
 
 .modalCard {
   width: min(920px, 100%);
-  max-height: 92vh;
+  max-height: 92dvh;
   overflow: hidden;
   border-radius: 18px;
   border: 1px solid rgba(255,255,255,0.12);

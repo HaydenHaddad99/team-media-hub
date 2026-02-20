@@ -64,6 +64,7 @@ export function TeamActionsMenu({ onRename, onDelete }: TeamActionsMenuProps) {
               border: "1px solid rgba(0, 174, 255, 0.3)",
               borderRadius: "6px",
               minWidth: "150px",
+              maxWidth: "min(200px, calc(100vw - 32px))",
               zIndex: 1000,
               boxShadow: "0 4px 12px rgba(0, 0, 0, 0.5)",
             }}
