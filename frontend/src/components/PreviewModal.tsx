@@ -41,6 +41,7 @@ export function PreviewModal({
   const [loadedIds, setLoadedIds] = useState<Set<string>>(new Set());
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [dragOffsetY, setDragOffsetY] = useState(0);
+  const [zoomScales, setZoomScales] = useState<Record<string, number>>({});
   const prefetchingRef = useRef<Set<string>>(new Set());
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const [emblaRef, emblaApi] = useEmblaCarousel({
@@ -289,6 +290,10 @@ export function PreviewModal({
                             doubleClick={{ mode: "toggle", step: 2 }}
                             pinch={{ step: 5 }}
                             wheel={{ step: 0.2 }}
+                            panning={{ disabled: (zoomScales[mediaId] || 1) === 1 }}
+                            onTransformed={(ref) => {
+                              setZoomScales((prev) => ({ ...prev, [mediaId]: ref.state.scale }));
+                            }}
                           >
                             <TransformComponent>
                               <img
