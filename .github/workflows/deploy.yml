@@ -45,6 +45,14 @@ jobs:
           cd frontend
           npm install
           npm run build
+
+      - name: Build Stripe Lambda layer
+        run: |
+          rm -rf layers/stripe/python
+          mkdir -p layers/stripe/python
+          python -m pip install -q stripe -t layers/stripe/python
+          test -d layers/stripe/python/stripe
+          PYTHONPATH=layers/stripe/python python -c "import stripe; print(stripe.VERSION)"
       
       - name: Deploy with CDK
         env:
