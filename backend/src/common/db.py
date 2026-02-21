@@ -104,6 +104,25 @@ def query_media_by_id(table_name: str, media_id: str):
 def delete_item(table_name: str, key: dict):
     table(table_name).delete_item(Key=key)
 
+def update_item(table_name: str, key: Dict[str, Any], update_expression: str, expression_values: Dict[str, Any] = None) -> None:
+    """
+    Update an item in a DynamoDB table.
+    
+    Example:
+        update_item(TABLE_TEAMS, {"team_id": team_id}, 
+                   "SET used_bytes = if_not_exists(used_bytes, :zero) + :size",
+                   {":zero": 0, ":size": 100})
+    """
+    from boto3.dynamodb.conditions import Attr
+    kwargs = {
+        "Key": key,
+        "UpdateExpression": update_expression,
+    }
+    if expression_values:
+        kwargs["ExpressionAttributeValues"] = expression_values
+    
+    table(table_name).update_item(**kwargs)
+
 def _normalize(obj: Any) -> Any:
     """
     Convert DynamoDB Decimal values (and nested structures) into JSON-serializable
