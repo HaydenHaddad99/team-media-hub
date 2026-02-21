@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { listMedia, MediaItem, clearStoredToken, getMe, MeResponse, presignDownload, deleteMedia, getUploaderIdentifier, createBillingCheckoutSession, upgradeBillingSubscription } from "../lib/api";
+import { listMedia, MediaItem, clearStoredToken, getMe, MeResponse, presignDownload, deleteMedia, getUploaderIdentifier, createBillingCheckoutSession, upgradeBillingSubscription, createBillingPortalSession } from "../lib/api";
 import { getHomeRoute, navigate } from "../lib/navigation";
 import { UploadButton } from "../components/UploadButton";
 import { MediaGrid } from "../components/MediaGrid";
@@ -267,6 +267,26 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
     }
   }
 
+  async function openBillingPortal() {
+    const teamId = me?.team?.team_id || "";
+    if (!teamId) return;
+
+    try {
+      setBillingBusy(true);
+      setErr(null);
+      const res = await createBillingPortalSession({ team_id: teamId });
+      if (res?.url) {
+        window.location.href = res.url;
+        return;
+      }
+      setErr("Portal session did not return a URL.");
+    } catch (ex: any) {
+      setErr(ex?.message || "Failed to open billing portal");
+    } finally {
+      setBillingBusy(false);
+    }
+  }
+
   // Auto-refresh while any photo lacks a thumbnail, up to a short window
   useEffect(() => {
     if (loading) return;
@@ -362,8 +382,92 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
         {/* Storage limit indicator with plan info */}
         {me?.team && (
           <div style={{ marginTop: 16, padding: 12, background: "rgba(255,255,255,0.04)", borderRadius: 8 }}>
+            {/* Status Badge */}
+            {(() => {
+              const plan = me.team.plan || "free";
+              const status = me.team.subscription_status;
+              const cancelAtPeriodEnd = me.team.cancel_at_period_end;
+              const currentPeriodEnd = me.team.current_period_end;
+              const pastDueSince = me.team.past_due_since;
+              
+              let badgeText = "";
+              let badgeColor = "rgba(0, 200, 100, 0.8)";  // Green for active
+              let badgeBackground = "rgba(0, 200, 100, 0.15)";
+              let showWarning = false;
+              let warningText = "";
+              
+              if (plan !== "free" && status === "active" && !cancelAtPeriodEnd) {
+                badgeText = "Active";
+              } else if (plan !== "free" && status === "active" && cancelAtPeriodEnd && currentPeriodEnd) {
+                const endDate = new Date(currentPeriodEnd * 1000).toLocaleDateString();
+                badgeText = `Cancels on ${endDate}`;
+                badgeColor = "rgba(255, 140, 0, 0.9)";
+                badgeBackground = "rgba(255, 140, 0, 0.15)";
+                showWarning = true;
+                warningText = `Your subscription will end on ${endDate}. You'll be downgraded to Free (10GB).`;
+              } else if (status === "past_due") {
+                badgeText = "Past due";
+                badgeColor = "rgba(255, 60, 60, 0.9)";
+                badgeBackground = "rgba(255, 60, 60, 0.15)";
+                showWarning = true;
+                if (pastDueSince) {
+                  const daysPastDue = Math.floor((Date.now() / 1000 - pastDueSince) / 86400);
+                  const daysLeft = Math.max(0, 7 - daysPastDue);
+                  warningText = `Payment failed. Uploads will be blocked in ${daysLeft} day${daysLeft !== 1 ? 's' : ''} if not resolved.`;
+                } else {
+                  warningText = "Payment failed. Please update your payment method.";
+                }
+              } else if (status === "canceled" || plan === "free") {
+                badgeText = plan === "free" ? "Free Plan" : "Canceled";
+                badgeColor = "rgba(150, 150, 150, 0.8)";
+                badgeBackground = "rgba(150, 150, 150, 0.15)";
+              } else if (status === "trialing") {
+                badgeText = "Trial";
+                badgeColor = "rgba(0, 170, 255, 0.9)";
+                badgeBackground = "rgba(0, 170, 255, 0.15)";
+              }
+              
+              return (
+                <>
+                  {badgeText && (
+                    <div style={{ marginBottom: 12 }}>
+                      <span
+                        style={{
+                          display: "inline-block",
+                          padding: "4px 10px",
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: badgeColor,
+                          background: badgeBackground,
+                          borderRadius: 4,
+                          border: `1px solid ${badgeColor.replace('0.9', '0.3')}`,
+                        }}
+                      >
+                        {badgeText}
+                      </span>
+                    </div>
+                  )}
+                  {showWarning && warningText && (
+                    <div
+                      style={{
+                        marginBottom: 12,
+                        padding: 10,
+                        fontSize: 12,
+                        color: "rgba(255, 200, 100, 1)",
+                        background: "rgba(255, 140, 0, 0.1)",
+                        border: "1px solid rgba(255, 140, 0, 0.3)",
+                        borderRadius: 6,
+                      }}
+                    >
+                      ⚠️ {warningText}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+            
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <div>
+              <div style={{ flex: 1 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 13 }}>
                   <span className="muted">Storage used</span>
                   <span style={{ opacity: 0.9 }}>{usageText} / {limitText}</span>
@@ -381,7 +485,16 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
               </div>
               {canUpload && (
                 <button
-                  onClick={() => setShowBillingModal(true)}
+                  onClick={() => {
+                    const plan = me?.team?.plan || "free";
+                    if (plan === "free") {
+                      setShowBillingModal(true);
+                    } else {
+                      // For paid plans, open billing portal to manage
+                      openBillingPortal();
+                    }
+                  }}
+                  disabled={billingBusy}
                   style={{
                     padding: "8px 12px",
                     marginLeft: 12,
@@ -390,16 +503,28 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
                     borderRadius: 6,
                     color: "rgba(0, 170, 255, 0.9)",
                     fontSize: 12,
-                    cursor: "pointer",
+                    cursor: billingBusy ? "not-allowed" : "pointer",
                     whiteSpace: "nowrap",
+                    opacity: billingBusy ? 0.6 : 1,
                   }}
                 >
-                  {me.team.plan === "free" ? "Upgrade" : me.team.plan === "plus" ? "Upgrade to Pro" : "Manage Plan"}
+                  {billingBusy ? "Loading..." : (me.team.plan === "free" || !me.team.plan) ? "Upgrade" : "Manage billing"}
                 </button>
               )}
             </div>
+            
+            {/* Plan details with renewal date */}
             <div className="muted" style={{ fontSize: 11 }}>
-              Plan: <strong>{(me.team.plan === "free" || !me.team.plan) ? "Free" : (me.team.plan || "Free").charAt(0).toUpperCase() + (me.team.plan || "").slice(1)}</strong> · Up to {storageLimitGB}GB storage · Unlimited viewers
+              Plan: <strong>{(me.team.plan === "free" || !me.team.plan) ? "Free" : (me.team.plan || "Free").charAt(0).toUpperCase() + (me.team.plan || "").slice(1)}</strong>
+              {" · Up to "}{storageLimitGB}GB storage · Unlimited viewers
+              
+              {/* Show renewal date for active subscriptions */}
+              {me.team.current_period_end && me.team.subscription_status === "active" && !me.team.cancel_at_period_end && (
+                <span>
+                  {" · Renews "}
+                  {new Date(me.team.current_period_end * 1000).toLocaleDateString()}
+                </span>
+              )}
             </div>
           </div>
         )}

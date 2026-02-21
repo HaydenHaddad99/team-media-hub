@@ -25,6 +25,7 @@ from handlers.admin_repair_storage import handle_admin_repair_storage
 from handlers.billing_checkout_session import handle_billing_checkout_session
 from handlers.billing_upgrade import handle_billing_upgrade
 from handlers.billing_webhook import handle_billing_webhook
+from handlers.billing_portal import handle_billing_portal
 
 def _route(event: Dict) -> Tuple[str, str]:
     rc = (event.get("requestContext") or {})
@@ -129,6 +130,9 @@ def handler(event: Dict, context: Any) -> Dict:
         if method == "POST" and path == "/billing/upgrade":
             body = _json_body(event)
             return handle_billing_upgrade(event, body)
+
+        if method == "POST" and path == "/billing/portal":
+            return handle_billing_portal(event)
 
         if method == "GET" and path == "/media/thumbnail":
             return handle_media_thumbnail(event)

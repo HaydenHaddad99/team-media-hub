@@ -219,6 +219,11 @@ export type MeResponse = {
     storage_limit_bytes?: number;
     used_bytes?: number;
     subscription_status?: string | null;
+    current_period_end?: number | null;  // Unix timestamp
+    cancel_at_period_end?: boolean;
+    cancel_at?: number | null;  // Unix timestamp
+    stripe_price_id?: string | null;
+    past_due_since?: number | null;  // Unix timestamp
   };
   invite: { role: "viewer" | "uploader" | "admin"; expires_at?: number };
   user_id?: string | null; // Present for coach/parent auth, absent for invite-only auth
@@ -267,6 +272,13 @@ export async function createBillingCheckoutSession(input: { team_id: string; tie
 
 export async function upgradeBillingSubscription(input: { team_id: string; tier: "pro" }) {
   return request<{ ok: boolean }>("/billing/upgrade", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function createBillingPortalSession(input: { team_id: string }) {
+  return request<{ url: string }>("/billing/portal", {
     method: "POST",
     body: JSON.stringify(input),
   });

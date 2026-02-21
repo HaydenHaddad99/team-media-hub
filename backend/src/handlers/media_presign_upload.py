@@ -43,6 +43,20 @@ def handle_media_presign_upload(event, body):
         storage_limit_bytes = storage_limit_gb * (1024 ** 3)
     used_bytes = team.get("used_bytes", 0)
     
+    # **7-day grace period for past_due subscriptions**
+    subscription_status = team.get("subscription_status")
+    past_due_since = team.get("past_due_since")
+    
+    if subscription_status == "past_due" and past_due_since:
+        days_past_due = (time.time() - past_due_since) / 86400
+        if days_past_due > 7:
+            return err(
+                "Uploads blocked. Your subscription payment is past due. "
+                "Please update your payment method to continue uploading.",
+                403,
+                code="PAYMENT_PAST_DUE"
+            )
+    
     if used_bytes + size_bytes > storage_limit_bytes:
         limit_gb = storage_limit_bytes / (1024 ** 3)
         return err(

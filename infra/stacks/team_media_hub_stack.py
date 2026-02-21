@@ -325,6 +325,7 @@ class TeamMediaHubStack(Stack):
             ("/coach/verify-access", apigwv2.HttpMethod.POST),
             ("/billing/checkout-session", apigwv2.HttpMethod.POST),
             ("/billing/upgrade", apigwv2.HttpMethod.POST),
+            ("/billing/portal", apigwv2.HttpMethod.POST),
             ("/billing/webhook", apigwv2.HttpMethod.POST),
             ("/media", apigwv2.HttpMethod.GET),
             ("/media", apigwv2.HttpMethod.DELETE),

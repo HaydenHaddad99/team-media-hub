@@ -181,25 +181,45 @@ def _apply_subscription_update(subscription: Dict, status_override: Optional[str
 
     status = status_override or subscription.get("status")
     price_id = _price_id_from_subscription(subscription)
+    cancel_at_period_end = subscription.get("cancel_at_period_end", False)
+    current_period_end = subscription.get("current_period_end")  # Unix timestamp
+    cancel_at = subscription.get("cancel_at")  # Unix timestamp when canceled
 
+    # Default to current plan from price
     plan, limit_bytes = map_price_to_plan(price_id) if price_id else ("free", 10 * GB_BYTES)
     
     # **Handle graceful cancellation**: If cancel_at_period_end=true, subscription is still
-    # active with paid storage until the period ends. Only revert to free when truly canceled.
-    cancel_at_period_end = subscription.get("cancel_at_period_end", False)
+    # active/trialing with paid storage until period ends.
+    # **Handle past_due**: Keep storage for 7 days grace period before downgrading.
     
-    # Only revert to free if:
-    # 1) Status is "canceled" or "incomplete_expired" (period has ended), OR
-    # 2) Status is "active" but cancel_at_period_end=true (user can't upload new files, but keep storage)
-    if status in ("canceled", "incomplete_expired"):
+    # Revert to free plan if:
+    # 1) Status is "canceled" or "incomplete_expired" (subscription ended), OR
+    # 2) Status is "unpaid" (failed after grace period)
+    if status in ("canceled", "incomplete_expired", "unpaid"):
         plan = "free"
         limit_bytes = 10 * GB_BYTES
-    elif cancel_at_period_end and status == "active":
-        # Subscription ends at period end, but they still have access until then.
-        # Keep the current plan/storage, but don't allow new uploads after period ends.
+    elif status in ("active", "trialing") and cancel_at_period_end:
+        # Subscription scheduled to cancel at period end - keep current plan until then
+        # The paid plan remains active until current_period_end
+        pass
+    elif status == "past_due":
+        # Track when we first entered past_due for grace period enforcement
+        # Keep current plan but track past_due_since for upload blocking
         pass
 
     limit_gb = int(limit_bytes / GB_BYTES)
+
+    # Determine past_due_since timestamp
+    from common.db import get_item
+    team = get_item(TABLE_TEAMS, {"team_id": team_id}) or {}
+    past_due_since = team.get("past_due_since")
+    
+    if status == "past_due" and not past_due_since:
+        # First time entering past_due - record timestamp
+        past_due_since = int(__import__('time').time())
+    elif status not in ("past_due",):
+        # No longer past_due - clear the timestamp
+        past_due_since = None
 
     update_fields = {
         "plan": plan,
@@ -209,7 +229,10 @@ def _apply_subscription_update(subscription: Dict, status_override: Optional[str
         "stripe_subscription_id": subscription.get("id"),
         "stripe_price_id": price_id,
         "subscription_status": status,
-        "cancel_at_period_end": cancel_at_period_end,  # Track for frontend/audit
+        "cancel_at_period_end": cancel_at_period_end,
+        "current_period_end": current_period_end,
+        "cancel_at": cancel_at,
+        "past_due_since": past_due_since,
     }
 
     _update_team(team_id, update_fields)
@@ -270,21 +293,51 @@ def _mark_webhook_event_processed(event_id: str) -> None:
         print(f"[stripe_service] Warning: Could not mark webhook {event_id} as processed: {e}")
 
 
+def create_portal_session(team: Dict) -> Dict:
+    """Create a Stripe Customer Portal session for managing subscription."""
+    _ensure_stripe()
+    
+    customer_id = team.get("stripe_customer_id")
+    if not customer_id:
+        raise ValueError("No Stripe customer ID found for team")
+    
+    return_url = STRIPE_SUCCESS_URL or f"{APP_BASE_URL}/feed"
+    
+    session = stripe.billing_portal.Session.create(
+        customer=customer_id,
+        return_url=return_url,
+    )
+    
+    return session
+
+
 def _update_team(team_id: str, fields: Dict) -> None:
     expression = []
     values = {}
+    remove_fields = []
+    
     for key, value in fields.items():
         if value is None:
-            continue
-        expression.append(f"{key} = :{key}")
-        values[f":{key}"] = value
+            # Use REMOVE for null values to clean up fields
+            remove_fields.append(key)
+        else:
+            expression.append(f"{key} = :{key}")
+            values[f":{key}"] = value
 
-    if not expression:
+    if not expression and not remove_fields:
         return
+
+    update_expr = ""
+    if expression:
+        update_expr += "SET " + ", ".join(expression)
+    if remove_fields:
+        if update_expr:
+            update_expr += " "
+        update_expr += "REMOVE " + ", ".join(remove_fields)
 
     update_item(
         TABLE_TEAMS,
         {"team_id": team_id},
-        "SET " + ", ".join(expression),
+        update_expr,
         values,
     )

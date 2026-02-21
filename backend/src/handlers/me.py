@@ -29,6 +29,11 @@ def handle_me(event):
                 "storage_limit_bytes": team.get("storage_limit_bytes", 10 * 1024 * 1024 * 1024),
                 "used_bytes": team.get("used_bytes", 0),
                 "subscription_status": team.get("subscription_status"),
+                "current_period_end": team.get("current_period_end"),
+                "cancel_at_period_end": team.get("cancel_at_period_end", False),
+                "cancel_at": team.get("cancel_at"),
+                "stripe_price_id": team.get("stripe_price_id"),
+                "past_due_since": team.get("past_due_since"),
             },
             "invite": {
                 "role": invite.get("role", "viewer"),
