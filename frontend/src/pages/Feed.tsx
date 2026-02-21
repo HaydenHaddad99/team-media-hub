@@ -22,6 +22,9 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
   const [meErr, setMeErr] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [showLeaveModal, setShowLeaveModal] = useState<boolean>(false);
+  const [showBillingModal, setShowBillingModal] = useState<boolean>(false);
+  const [billingBusy, setBillingBusy] = useState<boolean>(false);
+  const [billingMsg, setBillingMsg] = useState<string | null>(null);
 
   const role = me?.invite?.role || "viewer";
   const canUpload = role === "uploader" || role === "admin";
@@ -221,6 +224,49 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
     }
   }
 
+  async function startCheckout(tier: "plus" | "pro") {
+    const teamId = me?.team?.team_id || "";
+    if (!teamId) return;
+
+    try {
+      setBillingBusy(true);
+      setErr(null);
+      setBillingMsg(null);
+
+      const res = await createBillingCheckoutSession({ team_id: teamId, tier });
+      if (res?.url) {
+        window.location.href = res.url;
+        return;
+      }
+      setErr("Checkout session did not return a URL.");
+    } catch (ex: any) {
+      setErr(ex?.message || "Billing request failed");
+    } finally {
+      setBillingBusy(false);
+    }
+  }
+
+  async function upgradeToPro() {
+    const teamId = me?.team?.team_id || "";
+    if (!teamId) return;
+
+    try {
+      setBillingBusy(true);
+      setErr(null);
+      setBillingMsg("Upgrade requested. You'll see the new plan shortly...");
+      await upgradeBillingSubscription({ team_id: teamId, tier: "pro" });
+
+      // Close modal and refresh after webhook has time to apply
+      setShowBillingModal(false);
+      setTimeout(() => loadMe(), 3000);
+      setTimeout(() => loadMe(), 7000);
+    } catch (ex: any) {
+      setErr(ex?.message || "Upgrade failed");
+    } finally {
+      setBillingBusy(false);
+    }
+  }
+
   // Auto-refresh while any photo lacks a thumbnail, up to a short window
   useEffect(() => {
     if (loading) return;
@@ -335,26 +381,7 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
               </div>
               {canUpload && (
                 <button
-                  onClick={async () => {
-                    const teamId = me?.team?.team_id || "";
-                    const plan = me?.team?.plan || "free";
-                    if (!teamId) return;
-
-                    try {
-                      if (plan === "free") {
-                        const goPro = window.confirm("Upgrade to Pro (200GB)? Click Cancel for Plus (50GB).");
-                        const tier = goPro ? "pro" : "plus";
-                        const res = await createBillingCheckoutSession({ team_id: teamId, tier });
-                        if (res?.url) window.location.href = res.url;
-                      } else if (plan === "plus") {
-                        await upgradeBillingSubscription({ team_id: teamId, tier: "pro" });
-                        setErr("Upgrade requested. This may take a few seconds to reflect.");
-                        setTimeout(() => loadMe(), 4000);
-                      }
-                    } catch (ex: any) {
-                      setErr(ex?.message || "Billing request failed");
-                    }
-                  }}
+                  onClick={() => setShowBillingModal(true)}
                   style={{
                     padding: "8px 12px",
                     marginLeft: 12,
@@ -446,6 +473,108 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
       <footer className="footer muted">
         Team Media Hub: Private, invite-only sharing for youth sports — built for parents, not social networks.
       </footer>
+
+      {/* Billing Upgrade Modal */}
+      {showBillingModal && me?.team && canUpload && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.8)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={() => !billingBusy && setShowBillingModal(false)}
+        >
+          <div
+            style={{
+              backgroundColor: "#1a1a2e",
+              padding: "28px",
+              borderRadius: "12px",
+              maxWidth: "460px",
+              width: "92%",
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: "0 0 10px 0", color: "#fff" }}>Upgrade storage</h3>
+
+            <p style={{ margin: "0 0 14px 0", color: "#aaa", lineHeight: 1.6 }}>
+              You'll be redirected to Stripe Checkout to complete payment.
+              <br />
+              <span style={{ color: "#8fd3ff" }}>No charge happens here.</span> You can cancel on Stripe before paying.
+            </p>
+
+            {billingMsg ? (
+              <div style={{ margin: "0 0 14px 0", color: "#8fd3ff", fontSize: 13 }}>
+                {billingMsg}
+              </div>
+            ) : null}
+
+            <div style={{ display: "grid", gap: 10 }}>
+              {/* If free -> show both options */}
+              {(me.team.plan === "free" || !me.team.plan) && (
+                <>
+                  <button
+                    className="btn primary"
+                    disabled={billingBusy}
+                    onClick={() => startCheckout("plus")}
+                    style={{ justifyContent: "space-between", display: "flex" }}
+                  >
+                    <span>Upgrade to Plus (50GB)</span>
+                    <span style={{ opacity: 0.85 }}>$19/mo</span>
+                  </button>
+
+                  <button
+                    className="btn"
+                    disabled={billingBusy}
+                    onClick={() => startCheckout("pro")}
+                    style={{
+                      justifyContent: "space-between",
+                      display: "flex",
+                      border: "1px solid rgba(255,255,255,0.18)",
+                    }}
+                  >
+                    <span>Upgrade to Pro (200GB)</span>
+                    <span style={{ opacity: 0.85 }}>$39/mo</span>
+                  </button>
+                </>
+              )}
+
+              {/* If plus -> show prorated upgrade */}
+              {me.team.plan === "plus" && (
+                <button
+                  className="btn primary"
+                  disabled={billingBusy}
+                  onClick={upgradeToPro}
+                  style={{ justifyContent: "space-between", display: "flex" }}
+                >
+                  <span>Upgrade to Pro (200GB)</span>
+                  <span style={{ opacity: 0.85 }}>$39/mo</span>
+                </button>
+              )}
+
+              {/* If pro -> (optional) just close for now */}
+              {me.team.plan === "pro" && (
+                <div style={{ color: "#aaa", fontSize: 13 }}>
+                  You're already on Pro (200GB).
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", marginTop: 18 }}>
+              <button className="btn" disabled={billingBusy} onClick={() => setShowBillingModal(false)}>
+                Not now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Leave Team Confirmation Modal (Parents only) */}
       {showLeaveModal && (
