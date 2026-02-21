@@ -209,6 +209,7 @@ class TeamMediaHubStack(Stack):
             partition_key=dynamodb.Attribute(name="event_id", type=dynamodb.AttributeType.STRING),
             billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
             removal_policy=RemovalPolicy.DESTROY,
+            time_to_live_attribute="expires_at",  # Auto-expire old events after 7 days
         )
 
         # -------------------------
