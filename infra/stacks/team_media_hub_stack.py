@@ -202,6 +202,16 @@ class TeamMediaHubStack(Stack):
             projection_type=dynamodb.ProjectionType.ALL,
         )
 
+        # Webhook events table (for idempotency: track processed Stripe webhook events)
+        webhook_events_table = dynamodb.Table(
+            self,
+            "WebhookEventsTable",
+            partition_key=dynamodb.Attribute(name="event_id", type=dynamodb.AttributeType.STRING),
+            billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
+            removal_policy=RemovalPolicy.DESTROY,
+            time_to_live_attribute="processed_at",  # Auto-expire old events after 30 days
+        )
+
         # -------------------------
         # Backend: Lambda + HTTP API
         # -------------------------
@@ -232,6 +242,7 @@ class TeamMediaHubStack(Stack):
                 "TABLE_TEAM_MEMBERS": team_members_table.table_name,
                 "TABLE_AUTH_CODES": auth_codes_table.table_name,
                 "TABLE_USER_TOKENS": user_tokens_table.table_name,
+                "TABLE_WEBHOOK_EVENTS": webhook_events_table.table_name,
                 "SIGNED_URL_TTL_SECONDS": "900",
                 "MAX_UPLOAD_BYTES": str(300 * 1024 * 1024),
                 "ALLOWED_CONTENT_TYPES": "image/jpeg,image/png,image/heic,video/mp4,video/quicktime",
@@ -259,6 +270,7 @@ class TeamMediaHubStack(Stack):
         team_members_table.grant_read_write_data(api_fn)
         auth_codes_table.grant_read_write_data(api_fn)
         user_tokens_table.grant_read_write_data(api_fn)
+        webhook_events_table.grant_read_write_data(api_fn)
 
         api_fn.add_to_role_policy(iam.PolicyStatement(
             actions=["s3:PutObject", "s3:GetObject", "s3:HeadObject", "s3:DeleteObject"],

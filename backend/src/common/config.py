@@ -11,6 +11,7 @@ TABLE_AUDIT = os.getenv("TABLE_AUDIT", "")
 TABLE_USERS = os.getenv("TABLE_USERS", "")
 TABLE_TEAM_MEMBERS = os.getenv("TABLE_TEAM_MEMBERS", "")
 TABLE_AUTH_CODES = os.getenv("TABLE_AUTH_CODES", "")
+TABLE_WEBHOOK_EVENTS = os.getenv("TABLE_WEBHOOK_EVENTS", "")
 
 MEDIA_BUCKET = os.getenv("MEDIA_BUCKET", "")
 

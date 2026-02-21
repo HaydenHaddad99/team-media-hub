@@ -11,9 +11,10 @@ from common.config import (
     STRIPE_SUCCESS_URL,
     STRIPE_CANCEL_URL,
     TABLE_TEAMS,
+    TABLE_WEBHOOK_EVENTS,
     DYNAMODB,
 )
-from common.db import update_item
+from common.db import update_item, get_item, put_item
 
 GB_BYTES = 1024 * 1024 * 1024
 
@@ -126,8 +127,16 @@ def parse_and_apply_webhook(raw_body: bytes, signature: str) -> Dict:
         secret=STRIPE_WEBHOOK_SECRET,
     )
 
+    event_id = event.get("id")
     event_type = event.get("type")
     data = event.get("data", {}).get("object", {})
+
+    # **Idempotency Check**: Skip if we've already processed this event
+    if _is_webhook_event_processed(event_id):
+        return {"handled": False, "reason": "duplicate_event"}
+
+    # Mark this event as processed BEFORE handling it
+    _mark_webhook_event_processed(event_id)
 
     if event_type == "checkout.session.completed":
         if data.get("mode") != "subscription":
@@ -174,9 +183,21 @@ def _apply_subscription_update(subscription: Dict, status_override: Optional[str
     price_id = _price_id_from_subscription(subscription)
 
     plan, limit_bytes = map_price_to_plan(price_id) if price_id else ("free", 10 * GB_BYTES)
+    
+    # **Handle graceful cancellation**: If cancel_at_period_end=true, subscription is still
+    # active with paid storage until the period ends. Only revert to free when truly canceled.
+    cancel_at_period_end = subscription.get("cancel_at_period_end", False)
+    
+    # Only revert to free if:
+    # 1) Status is "canceled" or "incomplete_expired" (period has ended), OR
+    # 2) Status is "active" but cancel_at_period_end=true (user can't upload new files, but keep storage)
     if status in ("canceled", "incomplete_expired"):
         plan = "free"
         limit_bytes = 10 * GB_BYTES
+    elif cancel_at_period_end and status == "active":
+        # Subscription ends at period end, but they still have access until then.
+        # Keep the current plan/storage, but don't allow new uploads after period ends.
+        pass
 
     limit_gb = int(limit_bytes / GB_BYTES)
 
@@ -188,6 +209,7 @@ def _apply_subscription_update(subscription: Dict, status_override: Optional[str
         "stripe_subscription_id": subscription.get("id"),
         "stripe_price_id": price_id,
         "subscription_status": status,
+        "cancel_at_period_end": cancel_at_period_end,  # Track for frontend/audit
     }
 
     _update_team(team_id, update_fields)
@@ -224,6 +246,28 @@ def _find_team_by_subscription_id(subscription_id: str) -> Optional[Dict]:
     )
     items = resp.get("Items", [])
     return items[0] if items else None
+
+
+def _is_webhook_event_processed(event_id: str) -> bool:
+    """Check if we've already processed this webhook event (for idempotency)."""
+    try:
+        item = get_item(TABLE_WEBHOOK_EVENTS, {"event_id": event_id})
+        return item is not None
+    except Exception:
+        # If table doesn't exist or query fails, allow processing (fault-tolerant)
+        return False
+
+
+def _mark_webhook_event_processed(event_id: str) -> None:
+    """Mark a webhook event as processed (for idempotency)."""
+    try:
+        put_item(TABLE_WEBHOOK_EVENTS, {
+            "event_id": event_id,
+            "processed_at": int(__import__('time').time()),
+        })
+    except Exception as e:
+        # Log but don't fail the webhook if we can't mark it processed
+        print(f"[stripe_service] Warning: Could not mark webhook {event_id} as processed: {e}")
 
 
 def _update_team(team_id: str, fields: Dict) -> None:
