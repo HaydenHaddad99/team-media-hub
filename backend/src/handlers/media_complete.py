@@ -36,13 +36,16 @@ def handle_media_complete(event, body):
 
     # Re-check storage limit before finalizing (defensive)
     team = get_item(TABLE_TEAMS, {"team_id": team_id}) or {}
-    storage_limit_gb = team.get("storage_limit_gb", 10)
+    storage_limit_bytes = team.get("storage_limit_bytes")
+    if not storage_limit_bytes:
+        storage_limit_gb = team.get("storage_limit_gb", 10)
+        storage_limit_bytes = storage_limit_gb * (1024 ** 3)
     used_bytes = team.get("used_bytes", 0)
-    limit_bytes = storage_limit_gb * (1024 ** 3)
     
-    if used_bytes + size_bytes > limit_bytes:
+    if used_bytes + size_bytes > storage_limit_bytes:
+        limit_gb = storage_limit_bytes / (1024 ** 3)
         return err(
-            f"Team storage limit exceeded. Current: {used_bytes / (1024**3):.2f}GB / {storage_limit_gb}GB.",
+            f"Team storage limit exceeded. Current: {used_bytes / (1024**3):.2f}GB / {limit_gb:.0f}GB.",
             403,
             code="STORAGE_LIMIT_EXCEEDED"
         )

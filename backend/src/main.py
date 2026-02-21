@@ -22,6 +22,9 @@ from handlers.auth_verify_coach import handle_verify_coach
 from handlers.coach_teams import handle_get_coach_teams
 from handlers.coach_verify_access import handle_coach_verify_access
 from handlers.admin_repair_storage import handle_admin_repair_storage
+from handlers.billing_checkout_session import handle_billing_checkout_session
+from handlers.billing_upgrade import handle_billing_upgrade
+from handlers.billing_webhook import handle_billing_webhook
 
 def _route(event: Dict) -> Tuple[str, str]:
     rc = (event.get("requestContext") or {})
@@ -119,6 +122,14 @@ def handler(event: Dict, context: Any) -> Dict:
             body = _json_body(event)
             return handle_coach_verify_access(event, body)
 
+        if method == "POST" and path == "/billing/checkout-session":
+            body = _json_body(event)
+            return handle_billing_checkout_session(event, body)
+
+        if method == "POST" and path == "/billing/upgrade":
+            body = _json_body(event)
+            return handle_billing_upgrade(event, body)
+
         if method == "GET" and path == "/media/thumbnail":
             return handle_media_thumbnail(event)
 
@@ -138,6 +149,9 @@ def handler(event: Dict, context: Any) -> Dict:
 
         if method == "GET" and path == "/media/download-url":
             return handle_media_presign_download(event)
+
+        if method == "POST" and path == "/billing/webhook":
+            return handle_billing_webhook(event)
 
         if method == "POST" and path == "/admin/repair-storage":
             return handle_admin_repair_storage(event)

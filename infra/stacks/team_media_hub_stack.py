@@ -205,6 +205,14 @@ class TeamMediaHubStack(Stack):
         # -------------------------
         # Backend: Lambda + HTTP API
         # -------------------------
+        stripe_layer = _lambda.LayerVersion(
+            self,
+            "StripeLayer",
+            code=_lambda.Code.from_asset("../layers/stripe"),
+            compatible_runtimes=[_lambda.Runtime.PYTHON_3_12],
+            description="Stripe SDK for billing",
+        )
+
         api_fn = _lambda.Function(
             self,
             "ApiFunction",
@@ -213,6 +221,7 @@ class TeamMediaHubStack(Stack):
             code=_lambda.Code.from_asset("../backend/src"),
             timeout=Duration.seconds(30),
             memory_size=512,
+            layers=[stripe_layer],
             environment={
                 "MEDIA_BUCKET": media_bucket.bucket_name,
                 "TABLE_TEAMS": teams_table.table_name,
@@ -231,6 +240,13 @@ class TeamMediaHubStack(Stack):
                 "DEMO_TEAM_ID": demo_team_id.value_as_string,
                 "DEMO_INVITE_TTL_DAYS": demo_invite_ttl_days.value_as_string,
                 "SES_FROM_EMAIL": ses_from_email.value_as_string,
+                "STRIPE_SECRET_KEY": os.getenv("STRIPE_SECRET_KEY", ""),
+                "STRIPE_WEBHOOK_SECRET": os.getenv("STRIPE_WEBHOOK_SECRET", ""),
+                "STRIPE_PRICE_50GB": os.getenv("STRIPE_PRICE_50GB", ""),
+                "STRIPE_PRICE_200GB": os.getenv("STRIPE_PRICE_200GB", ""),
+                "APP_BASE_URL": os.getenv("APP_BASE_URL", ""),
+                "STRIPE_SUCCESS_URL": os.getenv("STRIPE_SUCCESS_URL", ""),
+                "STRIPE_CANCEL_URL": os.getenv("STRIPE_CANCEL_URL", ""),
                 # FRONTEND_BASE_URL will be set after we create CloudFront distribution
             },
         )
@@ -262,7 +278,7 @@ class TeamMediaHubStack(Stack):
             self,
             "HttpApi",
             cors_preflight=apigwv2.CorsPreflightOptions(
-                allow_headers=["content-type", "x-invite-token", "x-setup-key", "x-user-token", "x-coach-user-id"],
+                allow_headers=["content-type", "x-invite-token", "x-setup-key", "x-user-token", "x-coach-user-id", "stripe-signature"],
                 allow_methods=[
                     apigwv2.CorsHttpMethod.GET,
                     apigwv2.CorsHttpMethod.POST,
@@ -295,6 +311,9 @@ class TeamMediaHubStack(Stack):
             ("/auth/verify-coach", apigwv2.HttpMethod.POST),
             ("/coach/teams", apigwv2.HttpMethod.GET),
             ("/coach/verify-access", apigwv2.HttpMethod.POST),
+            ("/billing/checkout-session", apigwv2.HttpMethod.POST),
+            ("/billing/upgrade", apigwv2.HttpMethod.POST),
+            ("/billing/webhook", apigwv2.HttpMethod.POST),
             ("/media", apigwv2.HttpMethod.GET),
             ("/media", apigwv2.HttpMethod.DELETE),
             ("/media/thumbnail", apigwv2.HttpMethod.GET),

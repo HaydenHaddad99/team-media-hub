@@ -53,6 +53,7 @@ def handle_teams_create(event, body, user_id=None):
         "created_at": ts,
         "plan": "free",           # free | plus | pro
         "storage_limit_gb": 10,   # Default 10 GB for free tier
+        "storage_limit_bytes": 10 * 1024 * 1024 * 1024,
         "used_bytes": 0,          # Track cumulative bytes used
     })
 

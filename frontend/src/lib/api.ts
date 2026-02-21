@@ -72,6 +72,10 @@ export async function request<T>(
   // Attach invite token if present
   if (token) headers["x-invite-token"] = token;
 
+  // Attach coach user token for coach-only endpoints
+  const userToken = localStorage.getItem("tmh_user_token");
+  if (userToken) headers["x-user-token"] = userToken;
+
   // Attach coach user_id if available (for tracking uploads by authenticated coaches)
   const coachUserId = localStorage.getItem("tmh_coach_user_id");
   if (coachUserId) headers["x-coach-user-id"] = coachUserId;
@@ -212,7 +216,9 @@ export type MeResponse = {
     team_code?: string | null;
     plan?: "free" | "plus" | "pro";
     storage_limit_gb?: number;
+    storage_limit_bytes?: number;
     used_bytes?: number;
+    subscription_status?: string | null;
   };
   invite: { role: "viewer" | "uploader" | "admin"; expires_at?: number };
   user_id?: string | null; // Present for coach/parent auth, absent for invite-only auth
@@ -250,4 +256,18 @@ export async function getDemoInvite() {
 export async function deleteMedia(media_id: string) {
   const qs = new URLSearchParams({ media_id }).toString();
   return request<{ deleted: boolean; media_id: string }>(`/media?${qs}`, { method: "DELETE" });
+}
+
+export async function createBillingCheckoutSession(input: { team_id: string; tier: "plus" | "pro" }) {
+  return request<{ url: string }>("/billing/checkout-session", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function upgradeBillingSubscription(input: { team_id: string; tier: "pro" }) {
+  return request<{ ok: boolean }>("/billing/upgrade", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
 }

@@ -16,6 +16,14 @@ MEDIA_BUCKET = os.getenv("MEDIA_BUCKET", "")
 
 FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "").rstrip("/")
 
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+STRIPE_PRICE_50GB = os.getenv("STRIPE_PRICE_50GB", "")
+STRIPE_PRICE_200GB = os.getenv("STRIPE_PRICE_200GB", "")
+APP_BASE_URL = os.getenv("APP_BASE_URL", "").rstrip("/")
+STRIPE_SUCCESS_URL = os.getenv("STRIPE_SUCCESS_URL", "")
+STRIPE_CANCEL_URL = os.getenv("STRIPE_CANCEL_URL", "")
+
 SES_FROM_EMAIL = os.getenv("SES_FROM_EMAIL", "").strip()
 
 SETUP_KEY = os.getenv("SETUP_KEY", "")  # Required to create teams; empty string disables check (dev only)

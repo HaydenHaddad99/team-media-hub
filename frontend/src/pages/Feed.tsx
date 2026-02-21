@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { listMedia, MediaItem, clearStoredToken, getMe, MeResponse, presignDownload, deleteMedia, getUploaderIdentifier } from "../lib/api";
+import { listMedia, MediaItem, clearStoredToken, getMe, MeResponse, presignDownload, deleteMedia, getUploaderIdentifier, createBillingCheckoutSession, upgradeBillingSubscription } from "../lib/api";
 import { getHomeRoute, navigate } from "../lib/navigation";
 import { UploadButton } from "../components/UploadButton";
 import { MediaGrid } from "../components/MediaGrid";
@@ -38,9 +38,11 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
     : items.filter(i => (i.album_name || "All uploads") === albumFilter);
 
   // Get storage limit from team data (or default to 10 GB if not available)
-  const storageLimitGB = me?.team?.storage_limit_gb || 10;
+  const fallbackLimitBytes = (me?.team?.storage_limit_gb || 10) * 1024 * 1024 * 1024;
+  const storageLimitBytes = me?.team?.storage_limit_bytes || fallbackLimitBytes;
+  const storageLimitGB = Math.round(storageLimitBytes / (1024 * 1024 * 1024));
   const usedBytes = me?.team?.used_bytes || 0;
-  const usagePercent = Math.min(100, (usedBytes / (storageLimitGB * 1024 * 1024 * 1024)) * 100);
+  const usagePercent = Math.min(100, (usedBytes / storageLimitBytes) * 100);
   const usedGB = usedBytes / (1024 * 1024 * 1024);
   const usageText = usedGB < 0.01 
     ? `${(usedBytes / (1024 * 1024)).toFixed(1)} MB` 
@@ -333,7 +335,26 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
               </div>
               {canUpload && (
                 <button
-                  onClick={() => navigate("/billing")}
+                  onClick={async () => {
+                    const teamId = me?.team?.team_id || "";
+                    const plan = me?.team?.plan || "free";
+                    if (!teamId) return;
+
+                    try {
+                      if (plan === "free") {
+                        const goPro = window.confirm("Upgrade to Pro (200GB)? Click Cancel for Plus (50GB).");
+                        const tier = goPro ? "pro" : "plus";
+                        const res = await createBillingCheckoutSession({ team_id: teamId, tier });
+                        if (res?.url) window.location.href = res.url;
+                      } else if (plan === "plus") {
+                        await upgradeBillingSubscription({ team_id: teamId, tier: "pro" });
+                        setErr("Upgrade requested. This may take a few seconds to reflect.");
+                        setTimeout(() => loadMe(), 4000);
+                      }
+                    } catch (ex: any) {
+                      setErr(ex?.message || "Billing request failed");
+                    }
+                  }}
                   style={{
                     padding: "8px 12px",
                     marginLeft: 12,
@@ -346,7 +367,7 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
                     whiteSpace: "nowrap",
                   }}
                 >
-                  {me.team.plan === "free" ? "Upgrade" : "Manage Plan"}
+                  {me.team.plan === "free" ? "Upgrade" : me.team.plan === "plus" ? "Upgrade to Pro" : "Manage Plan"}
                 </button>
               )}
             </div>

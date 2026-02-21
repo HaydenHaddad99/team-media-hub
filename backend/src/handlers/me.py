@@ -26,7 +26,9 @@ def handle_me(event):
                 "team_code": team.get("team_code"),
                 "plan": team.get("plan", "free"),
                 "storage_limit_gb": team.get("storage_limit_gb", 10),
+                "storage_limit_bytes": team.get("storage_limit_bytes", 10 * 1024 * 1024 * 1024),
                 "used_bytes": team.get("used_bytes", 0),
+                "subscription_status": team.get("subscription_status"),
             },
             "invite": {
                 "role": invite.get("role", "viewer"),
