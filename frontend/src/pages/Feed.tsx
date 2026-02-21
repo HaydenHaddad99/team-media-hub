@@ -512,21 +512,21 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
                   {billingBusy ? "Loading..." : (me.team.plan === "free" || !me.team.plan) ? "Upgrade" : "Manage billing"}
                 </button>
               )}
-              {!canManageBilling && usagePercent >= 80 && (
-                <div style={{
-                  marginLeft: 12,
-                  padding: "8px 12px",
-                  fontSize: 12,
-                  color: "rgba(255, 200, 100, 0.9)",
-                  background: "rgba(255, 140, 0, 0.1)",
-                  border: "1px solid rgba(255, 140, 0, 0.3)",
-                  borderRadius: 6,
-                  whiteSpace: "nowrap",
-                }}>
-                  Storage almost full. Notify your coach.
-                </div>
-              )}
             </div>
+            {!canManageBilling && usagePercent >= 80 && (
+              <div style={{
+                marginTop: -8,
+                marginBottom: 12,
+                padding: "8px 12px",
+                fontSize: 12,
+                color: "rgba(255, 200, 100, 0.9)",
+                background: "rgba(255, 140, 0, 0.1)",
+                border: "1px solid rgba(255, 140, 0, 0.3)",
+                borderRadius: 6,
+              }}>
+                Storage is getting full — please notify your coach to upgrade.
+              </div>
+            )}
             
             {/* Plan details with renewal date */}
             <div className="muted" style={{ fontSize: 11 }}>
