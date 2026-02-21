@@ -1,6 +1,8 @@
 from typing import Dict, Optional, Tuple
 
+import time
 import stripe
+from botocore.exceptions import ClientError
 
 from common.config import (
     STRIPE_SECRET_KEY,
@@ -14,7 +16,7 @@ from common.config import (
     TABLE_WEBHOOK_EVENTS,
     DYNAMODB,
 )
-from common.db import update_item, get_item, put_item
+from common.db import update_item
 
 GB_BYTES = 1024 * 1024 * 1024
 
@@ -131,12 +133,9 @@ def parse_and_apply_webhook(raw_body: bytes, signature: str) -> Dict:
     event_type = event.get("type")
     data = event.get("data", {}).get("object", {})
 
-    # **Idempotency Check**: Skip if we've already processed this event
-    if _is_webhook_event_processed(event_id):
+    # **Idempotency Claim**: Atomically claim the event ID before processing
+    if not _claim_webhook_event(event_id):
         return {"handled": False, "reason": "duplicate_event"}
-
-    # Mark this event as processed BEFORE handling it
-    _mark_webhook_event_processed(event_id)
 
     if event_type == "checkout.session.completed":
         if data.get("mode") != "subscription":
@@ -271,26 +270,26 @@ def _find_team_by_subscription_id(subscription_id: str) -> Optional[Dict]:
     return items[0] if items else None
 
 
-def _is_webhook_event_processed(event_id: str) -> bool:
-    """Check if we've already processed this webhook event (for idempotency)."""
+def _claim_webhook_event(event_id: str) -> bool:
+    """Atomically claim a webhook event ID to prevent concurrent double-processing."""
     try:
-        item = get_item(TABLE_WEBHOOK_EVENTS, {"event_id": event_id})
-        return item is not None
-    except Exception:
-        # If table doesn't exist or query fails, allow processing (fault-tolerant)
-        return False
-
-
-def _mark_webhook_event_processed(event_id: str) -> None:
-    """Mark a webhook event as processed (for idempotency)."""
-    try:
-        put_item(TABLE_WEBHOOK_EVENTS, {
-            "event_id": event_id,
-            "processed_at": int(__import__('time').time()),
-        })
-    except Exception as e:
-        # Log but don't fail the webhook if we can't mark it processed
-        print(f"[stripe_service] Warning: Could not mark webhook {event_id} as processed: {e}")
+        now = int(time.time())
+        ttl = now + (7 * 24 * 60 * 60)
+        DYNAMODB.Table(TABLE_WEBHOOK_EVENTS).put_item(
+            Item={
+                "event_id": event_id,
+                "expires_at": ttl,
+                "created_at": now,
+            },
+            ConditionExpression="attribute_not_exists(event_id)",
+        )
+        return True
+    except ClientError as e:
+        if e.response.get("Error", {}).get("Code") == "ConditionalCheckFailedException":
+            return False
+        print(f"[stripe_service] Warning: Could not claim webhook {event_id}: {e}")
+        # Fail-open to avoid losing events if the table is misconfigured
+        return True
 
 
 def create_portal_session(team: Dict) -> Dict:

@@ -220,7 +220,7 @@ This test plan covers the production-ready Stripe subscription billing system wi
 - `WebhookEventsTable` has entry:
   ```
   event_id: "evt_..."
-  processed_at: <timestamp>
+  expires_at: <timestamp>
   ```
 - TTL automatically expires after 7 days
 
