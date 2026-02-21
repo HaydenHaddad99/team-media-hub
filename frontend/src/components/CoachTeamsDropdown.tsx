@@ -12,7 +12,20 @@ export function CoachTeamsDropdown() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 480);
   const currentTeamId = localStorage.getItem("tmh_current_team_id");
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
+  const selectRef = React.useRef<HTMLSelectElement>(null);
+  const [dropdownStyle, setDropdownStyle] = React.useState<React.CSSProperties>({});
+
+  // Track window size
+  React.useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 480);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   function fetchTeams() {
     if (loading) return;
@@ -74,9 +87,95 @@ export function CoachTeamsDropdown() {
     setOpen(false);
   }
 
+  // Position dropdown with collision detection for desktop
+  React.useEffect(() => {
+    if (open && buttonRef.current && !isMobile && teams.length > 0) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const dropdownWidth = 280;
+      const viewportWidth = window.innerWidth;
+      const padding = 16;
+
+      const style: React.CSSProperties = {
+        position: "fixed",
+        top: rect.bottom + 4,
+        background: "rgba(15, 18, 28, 0.98)",
+        border: "1px solid rgba(255, 255, 255, 0.12)",
+        borderRadius: 8,
+        minWidth: 200,
+        maxWidth: "min(280px, calc(100vw - 32px))",
+        maxHeight: "min(300px, 60vh)",
+        overflowY: "auto" as const,
+        zIndex: 9999,
+        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.4)",
+      };
+
+      if (rect.right + dropdownWidth + padding > viewportWidth) {
+        // Flip to left side if it would overflow right
+        style.left = Math.max(padding, rect.left - dropdownWidth - 8);
+      } else {
+        // Align to right
+        style.right = viewportWidth - rect.right;
+      }
+
+      setDropdownStyle(style);
+    }
+  }, [open, isMobile, teams.length]);
+
+  // Handle native select change on mobile
+  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const teamId = e.target.value;
+    if (teamId) {
+      const team = teams.find(t => t.team_id === teamId);
+      if (team) {
+        handleTeamClick(team.team_id, team.team_name, team.invite_token);
+      }
+    }
+    // Reset select
+    if (selectRef.current) {
+      selectRef.current.value = "";
+    }
+  };
+
+  // Mobile: render native select
+  if (isMobile) {
+    return (
+      <select
+        ref={selectRef}
+        className="appNavLink"
+        onChange={handleSelectChange}
+        onClick={() => {
+          if (teams.length === 0) {
+            fetchTeams();
+          }
+        }}
+        style={{
+          appearance: "none",
+          WebkitAppearance: "none",
+          MozAppearance: "none",
+          display: "flex",
+          alignItems: "center",
+          gap: 4,
+          cursor: "pointer",
+        }}
+        defaultValue=""
+      >
+        <option value="" disabled>
+          Teams {teams.length > 0 ? "▼" : ""}
+        </option>
+        {teams.map((team) => (
+          <option key={team.team_id} value={team.team_id}>
+            {team.team_id === currentTeamId ? "✓ " : ""}{team.team_name}
+          </option>
+        ))}
+      </select>
+    );
+  }
+
+  // Desktop: render custom dropdown with collision detection
   return (
-    <div style={{ position: "relative" }}>
+    <div>
       <button
+        ref={buttonRef}
         className="appNavLink"
         onClick={() => {
           if (!open && teams.length === 0) {
@@ -94,23 +193,7 @@ export function CoachTeamsDropdown() {
       </button>
 
       {open && (
-        <div
-          style={{
-            position: "absolute",
-            top: "100%",
-            right: 0,
-            marginTop: 4,
-            background: "rgba(15, 18, 28, 0.98)",
-            border: "1px solid rgba(255, 255, 255, 0.12)",
-            borderRadius: 8,
-            minWidth: 200,
-            maxWidth: "min(280px, calc(100vw - 32px))",
-            maxHeight: "min(300px, 60vh)",
-            overflowY: "auto",
-            zIndex: 50,
-            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.4)",
-          }}
-        >
+        <div style={dropdownStyle}>
           {loading && (
             <div style={{ padding: "12px 16px", fontSize: 12, color: "#888" }}>
               Loading...
