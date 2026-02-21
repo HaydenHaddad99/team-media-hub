@@ -30,6 +30,7 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
   const canUpload = role === "uploader" || role === "admin";
   const isAdmin = role === "admin";
   const isCoach = !!localStorage.getItem("tmh_user_token");
+  const canManageBilling = isCoach && isAdmin;  // Only coaches with admin role can manage billing
   const teamId = me?.team?.team_id || "";
 
   // Get unique albums from items
@@ -483,7 +484,7 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
                   />
                 </div>
               </div>
-              {canUpload && (
+              {canManageBilling && (
                 <button
                   onClick={() => {
                     const plan = me?.team?.plan || "free";
@@ -510,6 +511,20 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
                 >
                   {billingBusy ? "Loading..." : (me.team.plan === "free" || !me.team.plan) ? "Upgrade" : "Manage billing"}
                 </button>
+              )}
+              {!canManageBilling && usagePercent >= 80 && (
+                <div style={{
+                  marginLeft: 12,
+                  padding: "8px 12px",
+                  fontSize: 12,
+                  color: "rgba(255, 200, 100, 0.9)",
+                  background: "rgba(255, 140, 0, 0.1)",
+                  border: "1px solid rgba(255, 140, 0, 0.3)",
+                  borderRadius: 6,
+                  whiteSpace: "nowrap",
+                }}>
+                  Storage almost full. Notify your coach.
+                </div>
               )}
             </div>
             
