@@ -3,10 +3,11 @@ import time
 import uuid
 import boto3
 
-from common.config import MEDIA_BUCKET, SIGNED_URL_TTL_SECONDS, MAX_UPLOAD_BYTES, ALLOWED_CONTENT_TYPES
+from common.config import MEDIA_BUCKET, SIGNED_URL_TTL_SECONDS, MAX_UPLOAD_BYTES, ALLOWED_CONTENT_TYPES, TABLE_TEAMS
 from common.responses import ok, err
 from common.auth import require_invite, require_role
 from common.audit import write_audit
+from common.db import get_item
 
 s3 = boto3.client("s3")
 
@@ -33,6 +34,20 @@ def handle_media_presign_upload(event, body):
         return err("File too large for MVP limit.", 413, code="payload_too_large")
 
     team_id = invite["team_id"]
+    
+    # Check storage limit before allowing upload initiation
+    team = get_item(TABLE_TEAMS, {"team_id": team_id}) or {}
+    storage_limit_gb = team.get("storage_limit_gb", 10)
+    used_bytes = team.get("used_bytes", 0)
+    limit_bytes = storage_limit_gb * (1024 ** 3)
+    
+    if used_bytes + size_bytes > limit_bytes:
+        return err(
+            f"Team storage limit exceeded. Current: {used_bytes / (1024**3):.2f}GB / {storage_limit_gb}GB. "
+            f"Upload would exceed limit.",
+            403,
+            code="STORAGE_LIMIT_EXCEEDED"
+        )
     media_id = str(uuid.uuid4())
     safe_name = filename.replace("/", "_")
     object_key = f"media/{team_id}/{media_id}/{safe_name}"

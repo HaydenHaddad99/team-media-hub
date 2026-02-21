@@ -149,7 +149,17 @@ export function UploadButton({ onUploaded, defaultAlbum }: { onUploaded: () => v
       }
     } catch (ex: any) {
       console.error("Upload error:", ex);
-      setErr(ex?.message || "Upload failed");
+      
+      // Handle storage limit exceeded
+      const errorMsg = ex?.message || "Upload failed";
+      const isStorageLimit = errorMsg.toLowerCase().includes("storage limit") || 
+                             errorMsg.includes("STORAGE_LIMIT_EXCEEDED");
+      
+      if (isStorageLimit) {
+        setErr("❌ Storage limit reached. Delete files or upgrade your plan to continue uploading.");
+      } else {
+        setErr(errorMsg);
+      }
     } finally {
       setBusy(false);
       setStatus(null);

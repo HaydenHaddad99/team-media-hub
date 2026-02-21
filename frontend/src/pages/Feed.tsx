@@ -37,15 +37,15 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
     ? items 
     : items.filter(i => (i.album_name || "All uploads") === albumFilter);
 
-  // Calculate storage usage (soft limit for pricing story)
-  const STORAGE_LIMIT_GB = 20;
-  const totalBytes = items.reduce((sum, item) => sum + (item.size_bytes || 0), 0);
-  const usedGB = totalBytes / (1024 * 1024 * 1024);
-  const usagePercent = Math.min(100, (usedGB / STORAGE_LIMIT_GB) * 100);
+  // Get storage limit from team data (or default to 10 GB if not available)
+  const storageLimitGB = me?.team?.storage_limit_gb || 10;
+  const usedBytes = me?.team?.used_bytes || 0;
+  const usagePercent = Math.min(100, (usedBytes / (storageLimitGB * 1024 * 1024 * 1024)) * 100);
+  const usedGB = usedBytes / (1024 * 1024 * 1024);
   const usageText = usedGB < 0.01 
-    ? `${(totalBytes / (1024 * 1024)).toFixed(1)} MB` 
+    ? `${(usedBytes / (1024 * 1024)).toFixed(1)} MB` 
     : `${usedGB.toFixed(2)} GB`;
-  const limitText = `${STORAGE_LIMIT_GB} GB`;
+  const limitText = `${storageLimitGB} GB`;
 
   async function refresh() {
     try {
@@ -311,25 +311,47 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
           </div>
         )}
 
-        {/* Storage limit indicator (soft limit for pricing story) */}
-        {items.length > 0 && (
+        {/* Storage limit indicator with plan info */}
+        {me?.team && (
           <div style={{ marginTop: 16, padding: 12, background: "rgba(255,255,255,0.04)", borderRadius: 8 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 13 }}>
-              <span className="muted">Storage used</span>
-              <span style={{ opacity: 0.9 }}>{usageText} / {limitText}</span>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 13 }}>
+                  <span className="muted">Storage used</span>
+                  <span style={{ opacity: 0.9 }}>{usageText} / {limitText}</span>
+                </div>
+                <div style={{ height: 6, background: "rgba(255,255,255,0.08)", borderRadius: 3, overflow: "hidden" }}>
+                  <div 
+                    style={{ 
+                      height: "100%", 
+                      width: `${usagePercent}%`, 
+                      background: usagePercent > 80 ? "rgba(255, 140, 0, 0.7)" : "rgba(0, 170, 255, 0.6)",
+                      transition: "width 0.3s ease"
+                    }} 
+                  />
+                </div>
+              </div>
+              {canUpload && (
+                <button
+                  onClick={() => navigate("/billing")}
+                  style={{
+                    padding: "8px 12px",
+                    marginLeft: 12,
+                    background: "rgba(0, 170, 255, 0.2)",
+                    border: "1px solid rgba(0, 170, 255, 0.4)",
+                    borderRadius: 6,
+                    color: "rgba(0, 170, 255, 0.9)",
+                    fontSize: 12,
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {me.team.plan === "free" ? "Upgrade" : "Manage Plan"}
+                </button>
+              )}
             </div>
-            <div style={{ height: 6, background: "rgba(255,255,255,0.08)", borderRadius: 3, overflow: "hidden" }}>
-              <div 
-                style={{ 
-                  height: "100%", 
-                  width: `${usagePercent}%`, 
-                  background: usagePercent > 80 ? "rgba(255, 140, 0, 0.7)" : "rgba(0, 170, 255, 0.6)",
-                  transition: "width 0.3s ease"
-                }} 
-              />
-            </div>
-            <div className="muted" style={{ fontSize: 11, marginTop: 6 }}>
-              Team plan: Up to {STORAGE_LIMIT_GB}GB storage · Unlimited viewers
+            <div className="muted" style={{ fontSize: 11 }}>
+              Plan: <strong>{(me.team.plan === "free" || !me.team.plan) ? "Free" : (me.team.plan || "Free").charAt(0).toUpperCase() + (me.team.plan || "").slice(1)}</strong> · Up to {storageLimitGB}GB storage · Unlimited viewers
             </div>
           </div>
         )}

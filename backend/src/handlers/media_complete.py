@@ -1,8 +1,8 @@
 import time
 import boto3
 import hashlib
-from common.config import TABLE_MEDIA, MEDIA_BUCKET
-from common.db import put_item
+from common.config import TABLE_MEDIA, TABLE_TEAMS, MEDIA_BUCKET
+from common.db import put_item, get_item, update_item
 from common.responses import ok, err
 from common.auth import require_invite, require_role
 from common.audit import write_audit
@@ -33,6 +33,19 @@ def handle_media_complete(event, body):
 
     if not media_id or not object_key or not filename or not content_type or size_bytes <= 0:
         return err("media_id, object_key, filename, content_type, size_bytes are required.", 400, code="validation_error")
+
+    # Re-check storage limit before finalizing (defensive)
+    team = get_item(TABLE_TEAMS, {"team_id": team_id}) or {}
+    storage_limit_gb = team.get("storage_limit_gb", 10)
+    used_bytes = team.get("used_bytes", 0)
+    limit_bytes = storage_limit_gb * (1024 ** 3)
+    
+    if used_bytes + size_bytes > limit_bytes:
+        return err(
+            f"Team storage limit exceeded. Current: {used_bytes / (1024**3):.2f}GB / {storage_limit_gb}GB.",
+            403,
+            code="STORAGE_LIMIT_EXCEEDED"
+        )
 
     # Optional safety: confirm object exists (prevents phantom records).
     # This requires s3:HeadObject permission (we include it).
@@ -92,6 +105,20 @@ def handle_media_complete(event, body):
     
     put_item(TABLE_MEDIA, item)
     print(f"[UPLOAD] Saved media record: media_id={media_id}, team_id={team_id}, uploader_user_id={item.get('uploader_user_id', 'NONE')[:16] if item.get('uploader_user_id') else 'NONE'}...")
+
+    # Increment team's used_bytes
+    try:
+        update_item(
+            TABLE_TEAMS,
+            {"team_id": team_id},
+            "SET used_bytes = if_not_exists(used_bytes, :zero) + :size",
+            {":zero": 0, ":size": size_bytes}
+        )
+        print(f"[UPLOAD] Incremented used_bytes by {size_bytes} for team {team_id}")
+    except Exception as e:
+        print(f"[UPLOAD] Warning: Failed to update used_bytes: {e}")
+        # Don't fail the upload if we can't update used_bytes
+        # The repair script can fix this later
 
     write_audit(team_id, "media_complete", invite_token=invite.get("_raw_token"), meta={"media_id": media_id, "album_name": album_name})
 

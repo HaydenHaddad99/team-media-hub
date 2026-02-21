@@ -45,11 +45,15 @@ def handle_teams_create(event, body, user_id=None):
     # Generate team code
     team_code = generate_team_code(team_name)
 
+    # Default to free tier: 10 GB storage, 0 bytes used initially
     put_item(TABLE_TEAMS, {
         "team_id": team_id,
         "team_name": team_name,
         "team_code": team_code,
         "created_at": ts,
+        "plan": "free",           # free | plus | pro
+        "storage_limit_gb": 10,   # Default 10 GB for free tier
+        "used_bytes": 0,          # Track cumulative bytes used
     })
 
     # Create an admin invite token (token-only MVP).

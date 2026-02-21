@@ -21,6 +21,7 @@ from handlers.auth_coach_signin import handle_coach_signin
 from handlers.auth_verify_coach import handle_verify_coach
 from handlers.coach_teams import handle_get_coach_teams
 from handlers.coach_verify_access import handle_coach_verify_access
+from handlers.admin_repair_storage import handle_admin_repair_storage
 
 def _route(event: Dict) -> Tuple[str, str]:
     rc = (event.get("requestContext") or {})
@@ -137,6 +138,9 @@ def handler(event: Dict, context: Any) -> Dict:
 
         if method == "GET" and path == "/media/download-url":
             return handle_media_presign_download(event)
+
+        if method == "POST" and path == "/admin/repair-storage":
+            return handle_admin_repair_storage(event)
 
         return err("Not found.", 404, code="not_found")
 

@@ -3,8 +3,8 @@ import hashlib
 
 from common.responses import ok, err
 from common.auth import require_invite
-from common.config import TABLE_MEDIA, MEDIA_BUCKET
-from common.db import query_media_by_id, delete_item
+from common.config import TABLE_MEDIA, TABLE_TEAMS, MEDIA_BUCKET
+from common.db import query_media_by_id, delete_item, update_item
 from common.s3 import delete_object
 from common.audit import write_audit
 
@@ -104,6 +104,22 @@ def handle_media_delete(event):
     # Delete DB record
     delete_item(TABLE_MEDIA, {"team_id": team_id, "sk": item["sk"]})
     print(f"[DELETE] Deleted DynamoDB record: team_id={team_id}, sk={item['sk']}")
+
+    # Decrement team's used_bytes
+    size_bytes = item.get("size_bytes", 0)
+    if size_bytes > 0:
+        try:
+            update_item(
+                TABLE_TEAMS,
+                {"team_id": team_id},
+                "SET used_bytes = if_not_exists(used_bytes, :zero) - :size",
+                {":zero": 0, ":size": size_bytes}
+            )
+            print(f"[DELETE] Decremented used_bytes by {size_bytes} for team {team_id}")
+        except Exception as e:
+            print(f"[DELETE] Warning: Failed to update used_bytes: {e}")
+            # Don't fail the delete if we can't update used_bytes
+            # The repair script can fix this later
 
     write_audit(team_id, "media_delete", invite_token=invite.get("_raw_token"), meta={"media_id": media_id})
     print(f"[DELETE] SUCCESS: media_id={media_id}")

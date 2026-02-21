@@ -206,7 +206,14 @@ export function getCurrentToken(): string | null {
 }
 
 export type MeResponse = {
-  team: { team_id: string; team_name: string; team_code?: string | null };
+  team: {
+    team_id: string;
+    team_name: string;
+    team_code?: string | null;
+    plan?: "free" | "plus" | "pro";
+    storage_limit_gb?: number;
+    used_bytes?: number;
+  };
   invite: { role: "viewer" | "uploader" | "admin"; expires_at?: number };
   user_id?: string | null; // Present for coach/parent auth, absent for invite-only auth
 };
