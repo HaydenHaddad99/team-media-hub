@@ -57,6 +57,13 @@ jobs:
       - name: Deploy with CDK
         env:
           SETUP_KEY: ${{ secrets.SETUP_KEY }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          STRIPE_PRICE_50GB: ${{ secrets.STRIPE_PRICE_50GB }}
+          STRIPE_PRICE_200GB: ${{ secrets.STRIPE_PRICE_200GB }}
+          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+          STRIPE_SUCCESS_URL: ${{ secrets.STRIPE_SUCCESS_URL }}
+          STRIPE_CANCEL_URL: ${{ secrets.STRIPE_CANCEL_URL }}
         run: |
           npm install -g aws-cdk
           cd infra
