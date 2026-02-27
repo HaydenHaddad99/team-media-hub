@@ -61,6 +61,23 @@ class TeamMediaHubStack(Stack):
             description="Verified SES From email address (leave blank to log codes only)"
         )
 
+        email_provider = CfnParameter(
+            self,
+            "EmailProvider",
+            type="String",
+            default="resend",
+            allowed_values=["resend", "ses"],
+            description="Email provider: 'resend' (production) or 'ses' (legacy)"
+        )
+
+        email_from = CfnParameter(
+            self,
+            "EmailFrom",
+            type="String",
+            default="noreply@verify.teammediahub.co",
+            description="From email address for transactional emails"
+        )
+
         # -------------------------
         # Media Storage (private)
         # -------------------------
@@ -251,6 +268,9 @@ class TeamMediaHubStack(Stack):
                 "DEMO_TEAM_ID": demo_team_id.value_as_string,
                 "DEMO_INVITE_TTL_DAYS": demo_invite_ttl_days.value_as_string,
                 "SES_FROM_EMAIL": ses_from_email.value_as_string,
+                "EMAIL_PROVIDER": email_provider.value_as_string,
+                "EMAIL_FROM": email_from.value_as_string,
+                "RESEND_API_KEY": os.getenv("RESEND_API_KEY", ""),
                 "STRIPE_SECRET_KEY": os.getenv("STRIPE_SECRET_KEY", ""),
                 "STRIPE_WEBHOOK_SECRET": os.getenv("STRIPE_WEBHOOK_SECRET", ""),
                 "STRIPE_PRICE_50GB": os.getenv("STRIPE_PRICE_50GB", ""),

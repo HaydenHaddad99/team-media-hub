@@ -129,32 +129,12 @@ def get_team_members(team_id: str) -> list[dict]:
 
 def send_magic_link_email(email: str, code: str, team_name: str = "") -> None:
     """
-    Send verification code via email (AWS SES).
+    Send verification code via email service (Resend or SES).
     """
-    if not SES_FROM_EMAIL:
-        print(f"[MAGIC LINK] SES not configured. Email: {email}, Code: {code}, Team: {team_name}")
-        return
-
-    import boto3
-
-    subject_team = f" {team_name}" if team_name else ""
-    subject = f"Your Team Media Hub code{subject_team}".strip()
+    from common.email_service import send_verification_code
+    
     join_url = f"{FRONTEND_BASE_URL}/join" if FRONTEND_BASE_URL else ""
-
-    body_lines = [
-        f"Your verification code is: {code}",
-        "",
-        "This code expires in 10 minutes.",
-    ]
-    if join_url:
-        body_lines.extend(["", f"Join here: {join_url}"])
-
-    ses = boto3.client("ses", region_name=AWS_REGION)
-    ses.send_email(
-        Source=SES_FROM_EMAIL,
-        Destination={"ToAddresses": [email]},
-        Message={
-            "Subject": {"Data": subject},
-            "Body": {"Text": {"Data": "\n".join(body_lines)}},
-        },
-    )
+    
+    result = send_verification_code(email, code, team_name, join_url)
+    if not result["success"]:
+        print(f"[MAGIC LINK] Email failed: {result.get('error')}. Email: {email}, Code: {code}, Team: {team_name}")

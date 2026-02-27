@@ -1,5 +1,5 @@
 """
-Coach sign-in: Coach enters email → system creates auth code → sends via SES
+Coach sign-in: Coach enters email → system creates auth code → sends via email service
 """
 import hashlib
 import json
@@ -7,11 +7,10 @@ from datetime import datetime, timedelta
 import os
 from common.responses import ok, err
 from common.db import get_item, put_item, query_items
-from common.config import DYNAMODB, SES_FROM_EMAIL
-import boto3
+from common.config import DYNAMODB
+from common.email_service import send_coach_signin_code
 
 dynamodb = DYNAMODB
-ses = boto3.client("ses", region_name="us-east-1")
 
 def handle_coach_signin(event, body=None):
     """
@@ -47,38 +46,10 @@ def handle_coach_signin(event, body=None):
             "used": False,
         })
         
-        # Send email if SES is configured
-        if SES_FROM_EMAIL:
-            try:
-                ses.send_email(
-                    Source=SES_FROM_EMAIL,
-                    Destination={"ToAddresses": [email]},
-                    Message={
-                        "Subject": {"Data": "Your Team Media Hub Sign-In Code"},
-                        "Body": {
-                            "Html": {
-                                "Data": f"""
-                                <html>
-                                <body style="font-family: Arial, sans-serif; color: #333;">
-                                    <h2 style="color: #00aeff;">Sign In to Team Media Hub</h2>
-                                    <p>Your 6-digit code:</p>
-                                    <div style="background: #f0f0f0; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
-                                        <h1 style="color: #00aeff; letter-spacing: 4px; margin: 0;">{code}</h1>
-                                    </div>
-                                    <p style="color: #666; font-size: 14px;">This code expires in 10 minutes.</p>
-                                    <p style="color: #999; font-size: 12px;">If you didn't request this, you can safely ignore this email.</p>
-                                </body>
-                                </html>
-                                """
-                            }
-                        },
-                    },
-                )
-            except Exception as e:
-                print(f"SES error: {e}")
-                # Don't fail if email fails to send - still return code
-        else:
-            print(f"[COACH_SIGNIN] Code for {email}: {code}")
+        # Send email via email service
+        result = send_coach_signin_code(email, code)
+        if not result["success"]:
+            print(f"[COACH_SIGNIN] Email failed: {result.get('error')}. Code for {email}: {code}")
         
         return ok({"message": "Code sent to email"})
     
