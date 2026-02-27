@@ -5,6 +5,9 @@ import { JoinTeam } from "./pages/JoinTeam";
 import { CoachSignIn } from "./pages/CoachSignIn";
 import { CoachVerify } from "./pages/CoachVerify";
 import { CoachDashboard } from "./pages/CoachDashboard";
+import { Privacy } from "./pages/Privacy";
+import { Terms } from "./pages/Terms";
+import { Contact } from "./pages/Contact";
 import { CreateTeamForm } from "./components/CreateTeamForm";
 import { SetupKeyPrompt } from "./components/SetupKeyPrompt";
 import { AppShell } from "./components/AppShell";
@@ -20,6 +23,9 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState<string>(() => {
     const path = window.location.pathname;
     if (path === "/join") return "join";
+    if (path === "/privacy") return "privacy";
+    if (path === "/terms") return "terms";
+    if (path === "/contact") return "contact";
     if (path === "/create-team") return "create-team";
     if (path === "/coach/setup-key") return "coach-setup-key";
     if (path === "/coach/signin") return "coach-signin";
@@ -58,6 +64,12 @@ export default function App() {
       
       if (path === "/join") {
         setCurrentPage("join");
+      } else if (path === "/privacy") {
+        setCurrentPage("privacy");
+      } else if (path === "/terms") {
+        setCurrentPage("terms");
+      } else if (path === "/contact") {
+        setCurrentPage("contact");
       } else if (path === "/create-team") {
         setCurrentPage("create-team");
         setSetupKey(""); // Reset setup key when navigating to create-team
@@ -133,6 +145,19 @@ export default function App() {
   // Join page (no auth required)
   if (currentPage === "join") {
     return <JoinTeam />;
+  }
+
+  // Legal/info pages (no auth required)
+  if (currentPage === "privacy") {
+    return <Privacy />;
+  }
+
+  if (currentPage === "terms") {
+    return <Terms />;
+  }
+
+  if (currentPage === "contact") {
+    return <Contact />;
   }
 
   // Coach sign-in flow

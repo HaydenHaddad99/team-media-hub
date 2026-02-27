@@ -145,9 +145,36 @@ export function LandingPageNew({ onReady }: LandingPageNewProps) {
       <footer className="footer">
         <p>© 2026 Team Media Hub. Built for coaches. By coaches.</p>
         <div className="footer-links">
-          <a href="#privacy">Privacy</a>
-          <a href="#terms">Terms</a>
-          <a href="#contact">Contact</a>
+          <a
+            href="/privacy"
+            onClick={(e) => {
+              e.preventDefault();
+              window.history.pushState({}, "", "/privacy");
+              window.dispatchEvent(new PopStateEvent("popstate"));
+            }}
+          >
+            Privacy
+          </a>
+          <a
+            href="/terms"
+            onClick={(e) => {
+              e.preventDefault();
+              window.history.pushState({}, "", "/terms");
+              window.dispatchEvent(new PopStateEvent("popstate"));
+            }}
+          >
+            Terms
+          </a>
+          <a
+            href="/contact"
+            onClick={(e) => {
+              e.preventDefault();
+              window.history.pushState({}, "", "/contact");
+              window.dispatchEvent(new PopStateEvent("popstate"));
+            }}
+          >
+            Contact
+          </a>
         </div>
       </footer>
     </div>
