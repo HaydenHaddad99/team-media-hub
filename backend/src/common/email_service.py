@@ -134,44 +134,36 @@ def _send_via_resend(to_email: str, subject: str, text_body: str, html_body: str
         print(f"[EMAIL] EMAIL_FROM not configured. Email to {to_email}: {subject}")
         return {"success": False, "error": "EMAIL_FROM not configured"}
     
-    import urllib.request
-    
-    payload = {
-        "from": EMAIL_FROM,
-        "to": [to_email],
-        "subject": subject,
-        "text": text_body,
-        "html": html_body,
-    }
-    
     try:
-        req = urllib.request.Request(
+        import requests
+        
+        payload = {
+            "from": EMAIL_FROM,
+            "to": [to_email],
+            "subject": subject,
+            "text": text_body,
+        }
+        
+        response = requests.post(
             "https://api.resend.com/emails",
-            data=json.dumps(payload).encode("utf-8"),
+            json=payload,
             headers={
                 "Authorization": f"Bearer {RESEND_API_KEY}",
                 "Content-Type": "application/json",
             },
-            method="POST",
+            timeout=10
         )
         
-        with urllib.request.urlopen(req, timeout=10) as response:
-            response_data = json.loads(response.read().decode("utf-8"))
+        if response.status_code == 200:
+            response_data = response.json()
             message_id = response_data.get("id", "")
-            
             print(f"[EMAIL/RESEND] ✓ Sent to {to_email} (ID: {message_id})")
             return {"success": True, "message_id": message_id}
-    
-    except urllib.error.HTTPError as e:
-        error_body = e.read().decode("utf-8")
-        print(f"[EMAIL/RESEND] ✗ Failed to send to {to_email}: HTTP {e.code}")
-        print(f"[EMAIL/RESEND] Response body: {error_body}")
-        try:
-            error_data = json.loads(error_body)
-            error_message = error_data.get("message", error_body)
-        except:
-            error_message = error_body
-        return {"success": False, "error": f"Resend API error: {e.code} - {error_message}"}
+        else:
+            error_text = response.text
+            print(f"[EMAIL/RESEND] ✗ Failed to send to {to_email}: HTTP {response.status_code}")
+            print(f"[EMAIL/RESEND] Response: {error_text}")
+            return {"success": False, "error": f"Resend API error: {response.status_code}"}
     
     except Exception as e:
         print(f"[EMAIL/RESEND] ✗ Failed to send to {to_email}: {e}")
