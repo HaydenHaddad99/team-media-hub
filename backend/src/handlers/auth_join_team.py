@@ -9,6 +9,7 @@ Parents join a team by providing:
 from common.responses import ok, err
 from common.team_codes import get_team_by_code, validate_team_code_format
 from common.user_auth import create_or_get_user, generate_verification_code, store_verification_code, send_magic_link_email
+from common.rate_limiter import check_ip_rate_limit, check_email_rate_limit
 
 def handle_auth_join_team(event, body=None):
     """
@@ -29,6 +30,16 @@ def handle_auth_join_team(event, body=None):
         
         if not validate_team_code_format(team_code):
             return err("Invalid team code format", status_code=400)
+        
+        # Check IP rate limit
+        ip_allowed, ip_error = check_ip_rate_limit(event)
+        if not ip_allowed:
+            return err(ip_error, status_code=429, code="rate_limited")
+        
+        # Check email rate limit
+        email_allowed, email_error = check_email_rate_limit(email)
+        if not email_allowed:
+            return err(email_error, status_code=429, code="rate_limited")
         
         # Check if team exists
         team = get_team_by_code(team_code)

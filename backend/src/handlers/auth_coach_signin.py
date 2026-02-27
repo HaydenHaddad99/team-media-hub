@@ -9,6 +9,7 @@ from common.responses import ok, err
 from common.db import get_item, put_item, query_items
 from common.config import DYNAMODB
 from common.email_service import send_coach_signin_code
+from common.rate_limiter import check_ip_rate_limit, check_email_rate_limit
 
 dynamodb = DYNAMODB
 
@@ -23,6 +24,16 @@ def handle_coach_signin(event, body=None):
     email = (body.get("email") or "").strip().lower()
     if not email or "@" not in email:
         return err("Invalid email", status_code=400)
+
+    # Check IP rate limit
+    ip_allowed, ip_error = check_ip_rate_limit(event)
+    if not ip_allowed:
+        return err(ip_error, status_code=429, code="rate_limited")
+    
+    # Check email rate limit
+    email_allowed, email_error = check_email_rate_limit(email)
+    if not email_allowed:
+        return err(email_error, status_code=429, code="rate_limited")
 
     try:
         # Generate 6-digit code
