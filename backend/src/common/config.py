@@ -17,6 +17,11 @@ MEDIA_BUCKET = os.getenv("MEDIA_BUCKET", "")
 
 FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "").rstrip("/")
 
+# CloudFront media distribution
+CLOUDFRONT_DOMAIN = os.getenv("CLOUDFRONT_DOMAIN", "https://media.teammediahub.co")
+CLOUDFRONT_KEY_PAIR_ID = os.getenv("CLOUDFRONT_KEY_PAIR_ID", "")
+CLOUDFRONT_PRIVATE_KEY = os.getenv("CLOUDFRONT_PRIVATE_KEY", "")
+
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
 STRIPE_PRICE_50GB = os.getenv("STRIPE_PRICE_50GB", "")

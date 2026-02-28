@@ -106,6 +106,30 @@ class TeamMediaHubStack(Stack):
         )
 
         # -------------------------
+        # CloudFront Distribution for Media Downloads
+        # -------------------------
+        # Note: CloudFront Key Pair (Key ID and Private Key) must be created separately
+        # and passed via environment variables. See deployment instructions.
+        media_oai = cloudfront.OriginAccessIdentity(self, "MediaOAI")
+        media_bucket.grant_read(media_oai, "media/*")
+        media_bucket.grant_read(media_oai, "thumbnails/*")
+        media_bucket.grant_read(media_oai, "previews/*")
+
+        media_distribution = cloudfront.Distribution(
+            self,
+            "MediaDistribution",
+            default_behavior=cloudfront.BehaviorOptions(
+                origin=origins.S3Origin(media_bucket, origin_access_identity=media_oai),
+                viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+                allowed_methods=cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
+                cache_policy=cloudfront.CachePolicy.CACHING_OPTIMIZED,
+            ),
+            additional_behaviors={
+                # Signed URLs only - no public access
+            },
+        )
+
+        # -------------------------
         # App Data (DynamoDB)
         # -------------------------
         teams_table = dynamodb.Table(
@@ -251,6 +275,7 @@ class TeamMediaHubStack(Stack):
             layers=[stripe_layer],
             environment={
                 "MEDIA_BUCKET": media_bucket.bucket_name,
+                "CLOUDFRONT_DOMAIN": "https://media.teammediahub.co",
                 "TABLE_TEAMS": teams_table.table_name,
                 "TABLE_INVITES": invites_table.table_name,
                 "TABLE_MEDIA": media_table.table_name,
@@ -278,6 +303,8 @@ class TeamMediaHubStack(Stack):
                 "APP_BASE_URL": os.getenv("APP_BASE_URL", ""),
                 "STRIPE_SUCCESS_URL": os.getenv("STRIPE_SUCCESS_URL", ""),
                 "STRIPE_CANCEL_URL": os.getenv("STRIPE_CANCEL_URL", ""),
+                "CLOUDFRONT_KEY_PAIR_ID": os.getenv("CLOUDFRONT_KEY_PAIR_ID", ""),
+                "CLOUDFRONT_PRIVATE_KEY": os.getenv("CLOUDFRONT_PRIVATE_KEY", ""),
                 # FRONTEND_BASE_URL will be set after we create CloudFront distribution
             },
         )
@@ -461,4 +488,5 @@ class TeamMediaHubStack(Stack):
         # -------------------------
         CfnOutput(self, "ApiBaseUrl", value=http_api.url or "")
         CfnOutput(self, "MediaBucketName", value=media_bucket.bucket_name)
+        CfnOutput(self, "MediaDistributionDomain", value=media_distribution.domain_name)
         CfnOutput(self, "SiteUrl", value=f"https://{distribution.domain_name}")
