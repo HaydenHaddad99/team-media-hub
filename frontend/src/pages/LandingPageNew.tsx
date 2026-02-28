@@ -121,7 +121,7 @@ export function LandingPageNew({ onReady }: LandingPageNewProps) {
         </div>
         <div className="faq-item">
           <h4>How much storage do I get?</h4>
-          <p>5GB free. That's 100+ high-res photos. Upgrade anytime.</p>
+          <p>10GB free. That's 200+ high-res photos. Upgrade anytime.</p>
         </div>
         <div className="faq-item">
           <h4>Can I share outside my team?</h4>
