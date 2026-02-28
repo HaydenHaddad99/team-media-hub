@@ -53,6 +53,14 @@ jobs:
           python -m pip install -q stripe -t layers/stripe/python
           test -d layers/stripe/python/stripe
           PYTHONPATH=layers/stripe/python python -c "import stripe; print(stripe.VERSION)"
+
+      - name: Build Cryptography Lambda layer
+        run: |
+          rm -rf layers/cryptography/python
+          mkdir -p layers/cryptography/python
+          python -m pip install -q cryptography -t layers/cryptography/python
+          test -d layers/cryptography/python/cryptography
+          PYTHONPATH=layers/cryptography/python python -c "import cryptography; print(cryptography.__version__)"
       
       - name: Deploy with CDK
         env:
@@ -65,6 +73,8 @@ jobs:
           APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
           STRIPE_SUCCESS_URL: ${{ secrets.STRIPE_SUCCESS_URL }}
           STRIPE_CANCEL_URL: ${{ secrets.STRIPE_CANCEL_URL }}
+          CLOUDFRONT_KEY_PAIR_ID: ${{ secrets.CLOUDFRONT_KEY_PAIR_ID }}
+          CLOUDFRONT_PRIVATE_KEY: ${{ secrets.CLOUDFRONT_PRIVATE_KEY }}
         run: |
           npm install -g aws-cdk
           cd infra
