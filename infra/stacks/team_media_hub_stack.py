@@ -264,6 +264,14 @@ class TeamMediaHubStack(Stack):
             description="Stripe SDK for billing",
         )
 
+        cryptography_layer = _lambda.LayerVersion(
+            self,
+            "CryptographyLayer",
+            code=_lambda.Code.from_asset("../layers/cryptography"),
+            compatible_runtimes=[_lambda.Runtime.PYTHON_3_12],
+            description="Cryptography library for CloudFront URL signing",
+        )
+
         api_fn = _lambda.Function(
             self,
             "ApiFunction",
@@ -272,7 +280,7 @@ class TeamMediaHubStack(Stack):
             code=_lambda.Code.from_asset("../backend/src"),
             timeout=Duration.seconds(30),
             memory_size=512,
-            layers=[stripe_layer],
+            layers=[stripe_layer, cryptography_layer],
             environment={
                 "MEDIA_BUCKET": media_bucket.bucket_name,
                 "CLOUDFRONT_DOMAIN": "https://media.teammediahub.co",
