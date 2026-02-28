@@ -307,3 +307,501 @@
   background: rgba(0, 170, 255, 0.25);
   border-color: rgba(0, 170, 255, 0.5);
 }
+/* ========================================
+   Feed V2 Premium Layout
+   ======================================== */
+
+.feed-v2-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
+  color: #fff;
+  padding: 0;
+}
+
+/* Header: Team Identity */
+.feed-v2-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  gap: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.feed-v2-header-identity {
+  flex: 1;
+}
+
+.feed-v2-team-name {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.5px;
+}
+
+.feed-v2-welcome {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.feed-v2-role-muted {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 13px;
+}
+
+.feed-v2-header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.feed-v2-btn-ghost {
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.7);
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.feed-v2-btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
+/* Content Container */
+.feed-v2-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+/* Featured Album Card */
+.feed-v2-featured-album {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.feed-v2-featured-album-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.feed-v2-featured-album-title {
+  margin: 0 0 4px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.feed-v2-featured-album-meta {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.feed-v2-btn-view-album {
+  padding: 10px 20px;
+  background: rgba(0, 170, 255, 0.15);
+  border: 1px solid rgba(0, 170, 255, 0.3);
+  color: #00aeff;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.feed-v2-btn-view-album:hover {
+  background: rgba(0, 170, 255, 0.25);
+  border-color: rgba(0, 170, 255, 0.5);
+}
+
+/* Grid Section */
+.feed-v2-grid-section {
+  margin-bottom: 24px;
+}
+
+/* Compact Toolbar */
+.feed-v2-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.feed-v2-toolbar-left {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.feed-v2-toolbar-right {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.feed-v2-select {
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  min-width: 140px;
+}
+
+.feed-v2-select:focus {
+  outline: none;
+  border-color: rgba(0, 170, 255, 0.5);
+}
+
+.feed-v2-btn-toolbar {
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.8);
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.feed-v2-btn-toolbar:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.feed-v2-btn-toolbar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Desktop Upload - hide on mobile */
+.feed-v2-upload-desktop {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .feed-v2-upload-desktop {
+    display: block;
+  }
+}
+
+.feed-v2-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 15px;
+}
+
+/* Storage Slim Bar */
+.feed-v2-storage-bar {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+}
+
+.feed-v2-storage-warning {
+  padding: 12px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: rgba(255, 200, 100, 1);
+  background: rgba(255, 140, 0, 0.1);
+  border: 1px solid rgba(255, 140, 0, 0.3);
+  border-radius: 6px;
+}
+
+.feed-v2-storage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.feed-v2-storage-plan {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.feed-v2-storage-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 4px;
+  border: 1px solid;
+}
+
+.feed-v2-storage-plan-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.feed-v2-storage-usage-text {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.feed-v2-storage-progress {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.feed-v2-storage-progress-bar {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.feed-v2-btn-manage-billing {
+  padding: 8px 16px;
+  background: rgba(0, 170, 255, 0.15);
+  border: 1px solid rgba(0, 170, 255, 0.3);
+  border-radius: 6px;
+  color: #00aeff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  margin-top: 4px;
+}
+
+.feed-v2-btn-manage-billing:hover:not(:disabled) {
+  background: rgba(0, 170, 255, 0.25);
+  border-color: rgba(0, 170, 255, 0.5);
+}
+
+.feed-v2-btn-manage-billing:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.feed-v2-storage-parent-warning {
+  margin-top: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: rgba(255, 200, 100, 0.9);
+  background: rgba(255, 140, 0, 0.1);
+  border: 1px solid rgba(255, 140, 0, 0.3);
+  border-radius: 6px;
+}
+
+/* Invite Share Card */
+.feed-v2-invite-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+}
+
+.feed-v2-invite-title {
+  margin: 0 0 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.feed-v2-invite-code {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #fff;
+  margin: 0 0 16px;
+  padding: 12px;
+  background: rgba(0, 170, 255, 0.08);
+  border-radius: 8px;
+  font-family: 'Courier New', monospace;
+}
+
+.feed-v2-invite-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.feed-v2-btn-invite {
+  padding: 10px 24px;
+  background: rgba(0, 170, 255, 0.15);
+  border: 1px solid rgba(0, 170, 255, 0.3);
+  color: #00aeff;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 120px;
+}
+
+.feed-v2-btn-invite:hover {
+  background: rgba(0, 170, 255, 0.25);
+  border-color: rgba(0, 170, 255, 0.5);
+}
+
+/* Mobile Upload FAB */
+.feed-v2-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 900;
+  display: block;
+}
+
+@media (min-width: 768px) {
+  .feed-v2-fab {
+    display: none;
+  }
+}
+
+/* Selection Toolbar */
+.feed-v2-selection-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  z-index: 999;
+}
+
+.feed-v2-selection-content {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.feed-v2-selection-count {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.feed-v2-btn-selection {
+  padding: 10px 20px;
+  background: rgba(0, 170, 255, 0.2);
+  border: 1px solid rgba(0, 170, 255, 0.4);
+  color: #00aeff;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.feed-v2-btn-selection:hover {
+  background: rgba(0, 170, 255, 0.3);
+  border-color: rgba(0, 170, 255, 0.6);
+}
+
+.feed-v2-btn-selection-danger {
+  padding: 10px 20px;
+  background: rgba(255, 60, 60, 0.15);
+  border: 1px solid rgba(255, 60, 60, 0.4);
+  color: rgba(255, 100, 100, 0.9);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.feed-v2-btn-selection-danger:hover {
+  background: rgba(255, 60, 60, 0.25);
+  border-color: rgba(255, 60, 60, 0.6);
+  color: rgba(255, 120, 120, 1);
+}
+
+/* Footer */
+.feed-v2-footer {
+  text-align: center;
+  padding: 32px 24px;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 13px;
+  line-height: 1.5;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  margin-top: 40px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 767px) {
+  .feed-v2-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .feed-v2-header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .feed-v2-team-name {
+    font-size: 20px;
+  }
+
+  .feed-v2-content {
+    padding: 16px;
+  }
+
+  .feed-v2-featured-album-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .feed-v2-btn-view-album {
+    width: 100%;
+  }
+
+  .feed-v2-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .feed-v2-toolbar-left,
+  .feed-v2-toolbar-right {
+    width: 100%;
+  }
+
+  .feed-v2-select {
+    width: 100%;
+  }
+
+  .feed-v2-storage-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

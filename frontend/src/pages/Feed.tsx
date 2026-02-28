@@ -4,6 +4,7 @@ import { listMedia, MediaItem, clearStoredToken, getMe, MeResponse, presignDownl
 import { getHomeRoute, navigate } from "../lib/navigation";
 import { UploadButton } from "../components/UploadButton";
 import { MediaGrid } from "../components/MediaGrid";
+import "../styles/pages.css";
 
 export function Feed({ onLogout }: { onLogout: () => void }) {
   // Get team_id from URL params
@@ -309,81 +310,197 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
     };
   }, [items, loading]);
 
+  // Compute featured album (most recently uploaded media's album)
+  const featuredAlbum = (() => {
+    if (items.length === 0) return null;
+    // Find albums with names (exclude "All uploads")
+    const namedAlbums = items
+      .filter(i => i.album_name && i.album_name !== "All uploads")
+      .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+    
+    if (namedAlbums.length === 0) return null;
+    
+    const latestAlbumName = namedAlbums[0].album_name!;
+    const albumItems = items.filter(i => i.album_name === latestAlbumName);
+    const latestTimestamp = Math.max(...albumItems.map(i => i.created_at || 0));
+    
+    return {
+      name: latestAlbumName,
+      count: albumItems.length,
+      lastUpdated: latestTimestamp,
+    };
+  })();
+
+  function formatTimeAgo(timestamp: number) {
+    if (!timestamp) return "";
+    const seconds = Math.floor(Date.now() / 1000 - timestamp);
+    if (seconds < 60) return "just now";
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    return `${Math.floor(seconds / 86400)}d ago`;
+  }
+
+  async function handleCopyTeamCode() {
+    if (!me?.team?.team_code) return;
+    try {
+      await navigator.clipboard.writeText(me.team.team_code);
+      alert("Team code copied to clipboard!");
+    } catch (err) {
+      alert("Failed to copy team code");
+    }
+  }
+
+  async function handleShareTeam() {
+    if (!me?.team?.team_code) return;
+    const shareText = `Join our team on Team Media Hub. Team code: ${me.team.team_code}. Join here: https://app.teammediahub.co/join`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Join ${me.team.team_name || "our team"}`,
+          text: shareText,
+        });
+      } catch (err) {
+        // User cancelled or error - fallback to copy
+        if ((err as Error).name !== "AbortError") {
+          await navigator.clipboard.writeText(shareText);
+          alert("Share message copied to clipboard!");
+        }
+      }
+    } else {
+      // Fallback: copy to clipboard
+      await navigator.clipboard.writeText(shareText);
+      alert("Share message copied to clipboard!");
+    }
+  }
+
   return (
-    <div className="container">
-      <header className="header rowBetween">
-        <div>
-          <div className="brand">Team Code</div>
-          <div className="sub">
-            Role: <b>{role}</b>
-          </div>
-          {me?.team?.team_code ? (
-            <div style={{ marginTop: 12, padding: 12, background: "rgba(255,255,255,0.04)", borderRadius: 8, maxWidth: 400 }}>
-              <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: 1.5, marginBottom: 6 }}>
-                {me.team.team_code}
-              </div>
-              <div className="muted" style={{ fontSize: 12 }}>
-                Parents can join using this code.
-              </div>
-            </div>
-          ) : (
-            <div className="muted" style={{ marginTop: 12 }}>
-              Team code not available.
-            </div>
-          )}
-          {meErr ? <div className="error">{meErr}</div> : null}
+    <div className="feed-v2-container">
+      {/* Compact Team Identity Header */}
+      <div className="feed-v2-header">
+        <div className="feed-v2-header-identity">
+          <h1 className="feed-v2-team-name">{me?.team?.team_name || "Team"}</h1>
+          <p className="feed-v2-welcome">Welcome back{role && <span className="feed-v2-role-muted"> · {role}</span>}</p>
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <div className="feed-v2-header-actions">
           <button
-            className="btn"
+            className="feed-v2-btn-ghost"
             onClick={handleExitTeam}
           >
-            {isCoach ? "Exit Team" : "Leave Team"}
+            {isCoach ? "Switch Team" : "Leave"}
           </button>
         </div>
-      </header>
+      </div>
 
-      <div className="panel">
-        <div className="rowBetween" style={{ flexWrap: "wrap", gap: 12 }}>
-          <h2 style={{ margin: 0 }}>Uploads</h2>
-          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-            {(albums.length > 1 || (canUpload && items.length > 0)) && (
-              <select 
-                className="input" 
-                value={albumFilter} 
-                onChange={(e) => setAlbumFilter(e.target.value)}
-                style={{ minWidth: 120, maxWidth: 150 }}
+      {meErr && <div className="error" style={{ maxWidth: 1200, margin: "0 auto 16px" }}>{meErr}</div>}
+
+      <div className="feed-v2-content">
+        {/* Featured Album Card */}
+        {featuredAlbum && (
+          <div className="feed-v2-featured-album">
+            <div className="feed-v2-featured-album-header">
+              <div>
+                <h3 className="feed-v2-featured-album-title">{featuredAlbum.name}</h3>
+                <p className="feed-v2-featured-album-meta">
+                  {featuredAlbum.count} {featuredAlbum.count === 1 ? "item" : "items"}
+                  {featuredAlbum.lastUpdated > 0 && <span> · Updated {formatTimeAgo(featuredAlbum.lastUpdated)}</span>}
+                </p>
+              </div>
+              <button
+                className="feed-v2-btn-view-album"
+                onClick={() => setAlbumFilter(featuredAlbum.name)}
               >
-                <option value="all">All albums</option>
-                {albums.map(album => (
-                  <option key={album} value={album}>{album}</option>
-                ))}
-              </select>
-            )}
-            <button
-              className="btn secondary"
-              onClick={() => setSelectMode(s => !s)}
-            >
-              {selectMode ? "Done" : "Select"}
-            </button>
-            <button className="btn" onClick={refresh} disabled={loading}>
-              {loading ? "Loading..." : "Refresh"}
-            </button>
-          </div>
-        </div>
-
-        {canUpload ? (
-          <UploadButton onUploaded={handleUploadComplete} defaultAlbum={albumFilter === "all" ? "" : albumFilter} />
-        ) : (
-          <div className="muted" style={{ marginTop: 10 }}>
-            You can view and download media. Ask the team admin for an uploader link if you need to upload.
+                View Album
+              </button>
+            </div>
           </div>
         )}
 
-        {/* Storage limit indicator with plan info */}
+        {/* Media Grid Section */}
+        <div className="feed-v2-grid-section">
+          {/* Compact Toolbar above grid */}
+          <div className="feed-v2-toolbar">
+            <div className="feed-v2-toolbar-left">
+              {(albums.length > 1 || (canUpload && items.length > 0)) && (
+                <select 
+                  className="feed-v2-select" 
+                  value={albumFilter} 
+                  onChange={(e) => setAlbumFilter(e.target.value)}
+                >
+                  <option value="all">All albums</option>
+                  {albums.map(album => (
+                    <option key={album} value={album}>{album}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+            <div className="feed-v2-toolbar-right">
+              <button
+                className="feed-v2-btn-toolbar"
+                onClick={() => setSelectMode(s => !s)}
+              >
+                {selectMode ? "Done" : "Select"}
+              </button>
+              <button 
+                className="feed-v2-btn-toolbar" 
+                onClick={refresh} 
+                disabled={loading}
+              >
+                {loading ? "Loading..." : "Refresh"}
+              </button>
+              {/* Desktop Upload Button */}
+              {canUpload && (
+                <div className="feed-v2-upload-desktop">
+                  <UploadButton onUploaded={handleUploadComplete} defaultAlbum={albumFilter === "all" ? "" : albumFilter} />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {err && <div className="error" style={{ marginBottom: 16 }}>{err}</div>}
+
+          {/* Media Grid */}
+          {loading && items.length === 0 ? (
+            <MediaGrid items={[]} loading={true} />
+          ) : filteredItems.length === 0 && items.length > 0 ? (
+            <div className="feed-v2-empty">No media in this album.</div>
+          ) : filteredItems.length === 0 ? (
+            <div className="feed-v2-empty">
+              {canUpload
+                ? "No uploads yet. Start sharing by uploading your first photo or video."
+                : "No uploads yet. Share the uploader link to start collecting photos from parents."}
+            </div>
+          ) : (
+            <>
+              <MediaGrid
+                items={filteredItems}
+                loading={false}
+                canDelete={canUpload}
+                onDeleted={refresh}
+                selectMode={selectMode}
+                selectedIds={selectedIds}
+                onToggleSelect={toggleSelect}
+                currentUserId={currentUserId}
+                userRole={role}
+              />
+              {nextCursor && albumFilter === "all" && (
+                <div style={{ display: "flex", justifyContent: "center", marginTop: 20 }}>
+                  <button 
+                    className="feed-v2-btn-toolbar" 
+                    onClick={loadMore} 
+                    disabled={loadingMore}
+                  >
+                    {loadingMore ? "Loading..." : "Load more"}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Storage Slim Bar (below grid) */}
         {me?.team && (
-          <div style={{ marginTop: 16, padding: 12, background: "rgba(255,255,255,0.04)", borderRadius: 8 }}>
-            {/* Status Badge */}
+          <div className="feed-v2-storage-bar">
             {(() => {
               const plan = me.team.plan || "free";
               const status = me.team.subscription_status;
@@ -392,7 +509,7 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
               const pastDueSince = me.team.past_due_since;
               
               let badgeText = "";
-              let badgeColor = "rgba(0, 200, 100, 0.8)";  // Green for active
+              let badgeColor = "rgba(0, 200, 100, 0.8)";
               let badgeBackground = "rgba(0, 200, 100, 0.15)";
               let showWarning = false;
               let warningText = "";
@@ -430,187 +547,111 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
               
               return (
                 <>
-                  {badgeText && (
-                    <div style={{ marginBottom: 12 }}>
-                      <span
-                        style={{
-                          display: "inline-block",
-                          padding: "4px 10px",
-                          fontSize: 11,
-                          fontWeight: 600,
-                          color: badgeColor,
-                          background: badgeBackground,
-                          borderRadius: 4,
-                          border: `1px solid ${badgeColor.replace('0.9', '0.3')}`,
-                        }}
-                      >
-                        {badgeText}
-                      </span>
+                  {showWarning && warningText && (
+                    <div className="feed-v2-storage-warning">
+                      ⚠️ {warningText}
                     </div>
                   )}
-                  {showWarning && warningText && (
-                    <div
-                      style={{
-                        marginBottom: 12,
-                        padding: 10,
-                        fontSize: 12,
-                        color: "rgba(255, 200, 100, 1)",
-                        background: "rgba(255, 140, 0, 0.1)",
-                        border: "1px solid rgba(255, 140, 0, 0.3)",
-                        borderRadius: 6,
+                  
+                  <div className="feed-v2-storage-header">
+                    <div className="feed-v2-storage-plan">
+                      {badgeText && (
+                        <span
+                          className="feed-v2-storage-badge"
+                          style={{
+                            color: badgeColor,
+                            background: badgeBackground,
+                            borderColor: badgeColor.replace('0.9', '0.3').replace('0.8', '0.3'),
+                          }}
+                        >
+                          {badgeText}
+                        </span>
+                      )}
+                      <span className="feed-v2-storage-plan-text">
+                        {(me.team.plan === "free" || !me.team.plan) ? "Free" : (me.team.plan || "Free").charAt(0).toUpperCase() + (me.team.plan || "").slice(1)}
+                      </span>
+                    </div>
+                    <div className="feed-v2-storage-usage-text">
+                      {usageText} of {limitText}
+                    </div>
+                  </div>
+                  
+                  <div className="feed-v2-storage-progress">
+                    <div 
+                      className="feed-v2-storage-progress-bar"
+                      style={{ 
+                        width: `${usagePercent}%`, 
+                        background: usagePercent > 80 ? "rgba(255, 140, 0, 0.7)" : "rgba(0, 170, 255, 0.6)",
+                      }} 
+                    />
+                  </div>
+
+                  {canManageBilling && (
+                    <button
+                      className="feed-v2-btn-manage-billing"
+                      onClick={() => {
+                        const plan = me?.team?.plan || "free";
+                        if (plan === "free") {
+                          setShowBillingModal(true);
+                        } else {
+                          openBillingPortal();
+                        }
                       }}
+                      disabled={billingBusy}
                     >
-                      ⚠️ {warningText}
+                      {billingBusy ? "Loading..." : (me.team.plan === "free" || !me.team.plan) ? "Upgrade" : "Manage billing"}
+                    </button>
+                  )}
+
+                  {!canManageBilling && usagePercent >= 80 && (
+                    <div className="feed-v2-storage-parent-warning">
+                      Storage is getting full — please notify your coach to upgrade.
                     </div>
                   )}
                 </>
               );
             })()}
-            
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 13 }}>
-                  <span className="muted">Storage used</span>
-                  <span style={{ opacity: 0.9 }}>{usageText} / {limitText}</span>
-                </div>
-                <div style={{ height: 6, background: "rgba(255,255,255,0.08)", borderRadius: 3, overflow: "hidden" }}>
-                  <div 
-                    style={{ 
-                      height: "100%", 
-                      width: `${usagePercent}%`, 
-                      background: usagePercent > 80 ? "rgba(255, 140, 0, 0.7)" : "rgba(0, 170, 255, 0.6)",
-                      transition: "width 0.3s ease"
-                    }} 
-                  />
-                </div>
-              </div>
-              {canManageBilling && (
-                <button
-                  onClick={() => {
-                    const plan = me?.team?.plan || "free";
-                    if (plan === "free") {
-                      setShowBillingModal(true);
-                    } else {
-                      // For paid plans, open billing portal to manage
-                      openBillingPortal();
-                    }
-                  }}
-                  disabled={billingBusy}
-                  style={{
-                    padding: "8px 12px",
-                    marginLeft: 12,
-                    background: "rgba(0, 170, 255, 0.2)",
-                    border: "1px solid rgba(0, 170, 255, 0.4)",
-                    borderRadius: 6,
-                    color: "rgba(0, 170, 255, 0.9)",
-                    fontSize: 12,
-                    cursor: billingBusy ? "not-allowed" : "pointer",
-                    whiteSpace: "nowrap",
-                    opacity: billingBusy ? 0.6 : 1,
-                  }}
-                >
-                  {billingBusy ? "Loading..." : (me.team.plan === "free" || !me.team.plan) ? "Upgrade" : "Manage billing"}
-                </button>
-              )}
-            </div>
-            {!canManageBilling && usagePercent >= 80 && (
-              <div style={{
-                marginTop: -8,
-                marginBottom: 12,
-                padding: "8px 12px",
-                fontSize: 12,
-                color: "rgba(255, 200, 100, 0.9)",
-                background: "rgba(255, 140, 0, 0.1)",
-                border: "1px solid rgba(255, 140, 0, 0.3)",
-                borderRadius: 6,
-              }}>
-                Storage is getting full — please notify your coach to upgrade.
-              </div>
-            )}
-            
-            {/* Plan details with renewal date */}
-            <div className="muted" style={{ fontSize: 11 }}>
-              Plan: <strong>{(me.team.plan === "free" || !me.team.plan) ? "Free" : (me.team.plan || "Free").charAt(0).toUpperCase() + (me.team.plan || "").slice(1)}</strong>
-              {" · Up to "}{storageLimitGB}GB storage · Unlimited viewers
-              
-              {/* Show renewal date for active subscriptions */}
-              {me.team.current_period_end && me.team.subscription_status === "active" && !me.team.cancel_at_period_end && (
-                <span>
-                  {" · Renews "}
-                  {new Date(me.team.current_period_end * 1000).toLocaleDateString()}
-                </span>
-              )}
-            </div>
           </div>
         )}
 
-        {err ? <div className="error">{err}</div> : null}
-
-        {loading && items.length === 0 ? (
-          <MediaGrid items={[]} loading={true} />
-        ) : filteredItems.length === 0 && items.length > 0 ? (
-          <div className="muted">No media in this album.</div>
-        ) : filteredItems.length === 0 ? (
-          <div className="muted">
-            {canUpload
-              ? "No uploads yet. Start sharing by uploading your first photo or video."
-              : "No uploads yet. Share the uploader link to start collecting photos from parents."}
+        {/* Invite Share Card */}
+        {me?.team?.team_code && (
+          <div className="feed-v2-invite-card">
+            <h3 className="feed-v2-invite-title">Invite other parents</h3>
+            <div className="feed-v2-invite-code">{me.team.team_code}</div>
+            <div className="feed-v2-invite-actions">
+              <button className="feed-v2-btn-invite" onClick={handleCopyTeamCode}>
+                Copy Code
+              </button>
+              <button className="feed-v2-btn-invite" onClick={handleShareTeam}>
+                Share
+              </button>
+            </div>
           </div>
-        ) : (
-          <>
-            <MediaGrid
-              items={filteredItems}
-              loading={false}
-              canDelete={canUpload}
-              onDeleted={refresh}
-              selectMode={selectMode}
-              selectedIds={selectedIds}
-              onToggleSelect={toggleSelect}
-              currentUserId={currentUserId}
-              userRole={role}
-            />
-            {nextCursor && albumFilter === "all" ? (
-              <div style={{ display: "flex", justifyContent: "center", marginTop: 20 }}>
-                <button 
-                  className="btn secondary" 
-                  onClick={loadMore} 
-                  disabled={loadingMore}
-                >
-                  {loadingMore ? "Loading..." : "Load more"}
-                </button>
-              </div>
-            ) : null}
-          </>
         )}
       </div>
 
-      {selectMode && selectedIds.size > 0 ? (
-        <div
-          style={{
-            position: "fixed",
-            left: 0,
-            right: 0,
-            bottom: 0,
-            display: "flex",
-            justifyContent: "center",
-            padding: 12,
-            background: "rgba(0,0,0,0.6)",
-            backdropFilter: "blur(6px)",
-            borderTop: "1px solid rgba(255,255,255,0.15)",
-            zIndex: 999,
-          }}
-        >
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <div className="muted">Selected: {selectedIds.size}</div>
-            <button className="btn primary" onClick={downloadSelected}>Download selected</button>
-            {canUpload ? (
-              <button className="btn danger" onClick={deleteSelected}>Delete selected</button>
-            ) : null}
+      {/* Mobile Upload FAB */}
+      {canUpload && (
+        <div className="feed-v2-fab">
+          <UploadButton onUploaded={handleUploadComplete} defaultAlbum={albumFilter === "all" ? "" : albumFilter} />
+        </div>
+      )}
+
+      {/* Selection Toolbar */}
+      {selectMode && selectedIds.size > 0 && (
+        <div className="feed-v2-selection-bar">
+          <div className="feed-v2-selection-content">
+            <div className="feed-v2-selection-count">Selected: {selectedIds.size}</div>
+            <button className="feed-v2-btn-selection" onClick={downloadSelected}>Download selected</button>
+            {canUpload && (
+              <button className="feed-v2-btn-selection-danger" onClick={deleteSelected}>Delete selected</button>
+            )}
           </div>
         </div>
-      ) : null}
+      )}
 
-      <footer className="footer muted">
+      <footer className="feed-v2-footer">
         Team Media Hub: Private, invite-only sharing for youth sports — built for parents, not social networks.
       </footer>
 
