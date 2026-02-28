@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00aeff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0088ff;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="192" height="192" fill="url(#grad)"/>
+  <!-- Simplified camera for maskable -->
+  <circle cx="96" cy="75" r="28" fill="#fff" opacity="0.9"/>
+  <circle cx="96" cy="75" r="18" fill="#0f0f1e"/>
+  <rect x="45" y="110" width="102" height="60" fill="none" stroke="#fff" stroke-width="3" rx="6"/>
+  <polyline points="55,140 80,115 110,145 135,125" fill="none" stroke="#fff" stroke-width="3"/>
+</svg>

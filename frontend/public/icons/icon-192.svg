@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00aeff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0088ff;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="192" height="192" fill="#0f0f1e" rx="45"/>
+  <rect x="30" y="30" width="132" height="132" fill="url(#grad)" rx="20"/>
+  <!-- Camera icon -->
+  <circle cx="96" cy="80" r="30" fill="#0f0f1e" opacity="0.8"/>
+  <circle cx="96" cy="80" r="20" fill="#0f0f1e"/>
+  <path d="M 96 60 L 110 70 L 110 90 L 96 100 L 82 90 L 82 70 Z" fill="none" stroke="#0f0f1e" stroke-width="3"/>
+  <!-- Photo frame -->
+  <rect x="50" y="100" width="92" height="50" fill="none" stroke="#0f0f1e" stroke-width="2" rx="4"/>
+  <circle cx="65" cy="110" r="4" fill="#0f0f1e"/>
+  <path d="M 50 130 L 70 110 L 85 125 L 142 110" fill="none" stroke="#0f0f1e" stroke-width="2"/>
+</svg>

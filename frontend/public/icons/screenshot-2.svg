@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720">
+  <rect width="1280" height="720" fill="#0f0f1e"/>
+  <rect x="20" y="20" width="1240" height="80" fill="#1a1a2e" rx="8"/>
+  <text x="640" y="70" font-size="28" fill="#00aeff" text-anchor="middle" font-weight="bold">Team Media Hub</text>
+  <rect x="20" y="110" width="300" height="590" fill="#1a1a2e" rx="8"/>
+  <rect x="50" y="140" width="240" height="30" fill="#00aeff" rx="4"/>
+  <text x="170" y="162" font-size="14" fill="#0f0f1e" text-anchor="middle" font-weight="bold">Photos</text>
+  <rect x="50" y="190" width="240" height="25" fill="#333" rx="4"/>
+  <text x="170" y="208" font-size="12" fill="#999" text-anchor="middle">Settings</text>
+  <rect x="350" y="110" width="910" height="590" fill="#1a1a2e" rx="8"/>
+  <g opacity="0.3">
+    <rect x="380" y="150" width="200" height="200" fill="#00aeff" rx="4"/>
+    <rect x="600" y="150" width="200" height="200" fill="#00aeff" rx="4"/>
+    <rect x="820" y="150" width="200" height="200" fill="#00aeff" rx="4"/>
+    <rect x="380" y="380" width="200" height="200" fill="#00aeff" rx="4"/>
+    <rect x="600" y="380" width="200" height="200" fill="#00aeff" rx="4"/>
+    <rect x="820" y="380" width="200" height="200" fill="#00aeff" rx="4"/>
+  </g>
+</svg>

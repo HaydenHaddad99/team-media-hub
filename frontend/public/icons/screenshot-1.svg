@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 720">
+  <rect width="540" height="720" fill="#0f0f1e"/>
+  <rect x="20" y="30" width="500" height="100" fill="#1a1a2e" rx="8"/>
+  <text x="270" y="85" font-size="24" fill="#00aeff" text-anchor="middle" font-weight="bold">Team Media Hub</text>
+  <rect x="30" y="150" width="480" height="500" fill="#1a1a2e" rx="8"/>
+  <circle cx="135" cy="230" r="40" fill="#00aeff" opacity="0.3"/>
+  <circle cx="405" cy="380" r="50" fill="#00aeff" opacity="0.2"/>
+  <rect x="60" y="320" width="420" height="3" fill="#00aeff" opacity="0.4"/>
+  <rect x="60" y="340" width="250" height="3" fill="#00aeff" opacity="0.4"/>
+  <rect x="30" y="680" width="480" height="40" fill="#00aeff" rx="4"/>
+  <text x="270" y="705" font-size="16" fill="#0f0f1e" text-anchor="middle" font-weight="bold">Browse Photos</text>
+</svg>

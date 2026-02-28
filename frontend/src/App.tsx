@@ -11,6 +11,8 @@ import { Contact } from "./pages/Contact";
 import { CreateTeamForm } from "./components/CreateTeamForm";
 import { SetupKeyPrompt } from "./components/SetupKeyPrompt";
 import { AppShell } from "./components/AppShell";
+import { InstallPrompt } from "./components/InstallPrompt";
+import { IOSInstallModal } from "./components/IOSInstallModal";
 import { getCurrentToken } from "./lib/api";
 import { getRedirectFromLanding, rememberLastTeam } from "./lib/navigation";
 
@@ -315,10 +317,18 @@ export default function App() {
 
   // App (requires auth)
   return hasToken ? (
-    <AppShell currentPage={currentPage} onSignOut={handleGlobalSignOut}>
-      <Feed key={currentTeamId} onLogout={() => setHasToken(false)} />
-    </AppShell>
+    <>
+      <InstallPrompt />
+      <IOSInstallModal />
+      <AppShell currentPage={currentPage} onSignOut={handleGlobalSignOut}>
+        <Feed key={currentTeamId} onLogout={() => setHasToken(false)} />
+      </AppShell>
+    </>
   ) : (
-    <LandingPageNew onReady={() => setHasToken(true)} />
+    <>
+      <InstallPrompt />
+      <IOSInstallModal />
+      <LandingPageNew onReady={() => setHasToken(true)} />
+    </>
   );
 }
