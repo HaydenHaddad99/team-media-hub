@@ -23,7 +23,10 @@ export default defineConfig({
         globIgnores: [
           '**/node_modules/**/*',
           '**/.git/**/*',
+          '**/screenshots/**',  // Don't precache large screenshots
+          '**/icons/screenshot-*.png',  // Exclude screenshot files
         ],
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,  // 3MB limit for icons
         // Cache app shell only
         runtimeCaching: [
           {

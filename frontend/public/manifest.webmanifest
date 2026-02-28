@@ -9,20 +9,6 @@
   "theme_color": "#00aeff",
   "background_color": "#0f0f1e",
   "categories": ["photos", "lifestyle"],
-  "screenshots": [
-    {
-      "src": "/icons/screenshot-1.png",
-      "sizes": "540x720",
-      "form_factor": "narrow",
-      "type": "image/png"
-    },
-    {
-      "src": "/icons/screenshot-2.png",
-      "sizes": "1280x720",
-      "form_factor": "wide",
-      "type": "image/png"
-    }
-  ],
   "icons": [
     {
       "src": "/icons/icon-192.png",

@@ -19,9 +19,12 @@ export const IOSInstallModal: React.FC = () => {
       return;
     }
 
-    // Show once authenticated (has token)
-    const token = localStorage.getItem('invite_token');
-    if (token) {
+    // Show once authenticated (check multiple token keys)
+    const hasInviteToken = localStorage.getItem('tmh_invite_token');
+    const hasTeamId = localStorage.getItem('team_id');
+    const hasUserToken = localStorage.getItem('tmh_user_token');
+    
+    if (hasInviteToken || (hasUserToken && hasTeamId)) {
       // Show after short delay to avoid overwhelming user
       setTimeout(() => {
         setShowModal(true);
