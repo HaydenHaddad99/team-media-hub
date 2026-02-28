@@ -283,7 +283,7 @@ class TeamMediaHubStack(Stack):
             layers=[stripe_layer, cryptography_layer],
             environment={
                 "MEDIA_BUCKET": media_bucket.bucket_name,
-                "CLOUDFRONT_DOMAIN": "https://media.teammediahub.co",
+                "CLOUDFRONT_DOMAIN": f"https://{media_distribution.domain_name}",
                 "TABLE_TEAMS": teams_table.table_name,
                 "TABLE_INVITES": invites_table.table_name,
                 "TABLE_MEDIA": media_table.table_name,
