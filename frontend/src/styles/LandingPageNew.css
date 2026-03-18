@@ -8,11 +8,11 @@
 
 /* Hero Section */
 .hero {
-  min-height: 100vh;
+  min-height: clamp(560px, 78vh, 760px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 40px 20px;
+  padding: 72px 20px 48px;
   text-align: center;
   background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
 }
@@ -35,7 +35,7 @@
 .hero-subtitle {
   font-size: 20px;
   color: #aaa;
-  margin: 0 0 40px 0;
+  margin: 0 0 32px 0;
   line-height: 1.6;
 }
 
@@ -59,7 +59,7 @@
 }
 
 .coach-link {
-  margin: 30px 0 0 0;
+  margin: 22px 0 0 0;
   color: #aaa;
   font-size: 16px;
 }
@@ -81,7 +81,7 @@
 
 /* Screenshots Section */
 .screenshots-section {
-  padding: 80px 40px;
+  padding: 56px 40px;
   max-width: 1200px;
   margin: 0 auto;
 }
@@ -89,7 +89,7 @@
 .screenshots-section h2 {
   font-size: 42px;
   text-align: center;
-  margin-bottom: 60px;
+  margin: 0 0 40px;
   color: #fff;
 }
 
@@ -163,7 +163,7 @@
   display: flex;
   justify-content: space-around;
   align-items: center;
-  padding: 60px 40px;
+  padding: 44px 40px;
   background: rgba(0, 174, 255, 0.05);
   border-top: 1px solid rgba(0, 174, 255, 0.1);
   border-bottom: 1px solid rgba(0, 174, 255, 0.1);
@@ -192,7 +192,7 @@
 
 /* Testimonials */
 .testimonials {
-  padding: 80px 40px;
+  padding: 64px 40px;
   max-width: 1000px;
   margin: 0 auto;
 }
@@ -200,7 +200,7 @@
 .testimonials h2 {
   font-size: 42px;
   text-align: center;
-  margin-bottom: 50px;
+  margin: 0 0 36px;
   color: #fff;
 }
 
@@ -227,7 +227,7 @@
 
 /* FAQ Section */
 .faq {
-  padding: 80px 40px;
+  padding: 64px 40px;
   max-width: 800px;
   margin: 0 auto;
 }
@@ -235,12 +235,12 @@
 .faq h2 {
   font-size: 42px;
   text-align: center;
-  margin-bottom: 50px;
+  margin: 0 0 36px;
   color: #fff;
 }
 
 .faq-item {
-  margin-bottom: 30px;
+  margin-bottom: 20px;
   background: rgba(255, 255, 255, 0.03);
   padding: 25px;
   border-radius: 8px;
@@ -262,14 +262,14 @@
 
 /* CTA Section */
 .cta-section {
-  padding: 60px 40px;
+  padding: 52px 40px;
   text-align: center;
   background: rgba(0, 174, 255, 0.08);
 }
 
 .cta-section h2 {
   font-size: 36px;
-  margin-bottom: 30px;
+  margin: 0 0 24px;
   color: #fff;
 }
 
@@ -301,6 +301,11 @@
 
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
+  .hero {
+    min-height: 0;
+    padding: 56px 20px 36px;
+  }
+
   .hero h1 {
     font-size: 36px;
   }
@@ -309,8 +314,28 @@
     font-size: 16px;
   }
 
+  .screenshots-section,
+  .testimonials,
+  .faq,
+  .cta-section {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .screenshots-section,
+  .testimonials,
+  .faq {
+    padding-top: 48px;
+    padding-bottom: 48px;
+  }
+
+  .trust-section {
+    padding: 36px 20px;
+  }
+
   .screenshots-section h2,
   .testimonials h2,
+  .faq h2,
   .cta-section h2 {
     font-size: 28px;
   }
