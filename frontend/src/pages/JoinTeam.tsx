@@ -70,7 +70,7 @@ export function JoinTeam() {
   }
 
   const content = step === "verify" ? (
-    <div className="container" style={{ maxWidth: 480, margin: "80px auto", padding: 24 }}>
+    <div className="container joinTeamCard" style={{ maxWidth: 480, padding: 24 }}>
       <h1 style={{ fontSize: 28, marginBottom: 12 }}>Check Your Email</h1>
       <p style={{ color: "#888", marginBottom: 32 }}>
         We sent a 6-digit code to <strong>{email}</strong>
@@ -113,7 +113,7 @@ export function JoinTeam() {
       </form>
     </div>
   ) : (
-    <div className="container" style={{ maxWidth: 480, margin: "80px auto", padding: 24 }}>
+    <div className="container joinTeamCard" style={{ maxWidth: 480, padding: 24 }}>
       <h1 style={{ fontSize: 28, marginBottom: 12 }}>Join Team</h1>
       <p style={{ color: "#888", marginBottom: 32 }}>
         Enter your email and team code to get started
@@ -161,9 +161,9 @@ export function JoinTeam() {
   );
 
   return (
-    <div>
+    <div className="joinTeamPage">
       <PublicNav />
-      {content}
+      <div className="joinTeamCenter">{content}</div>
     </div>
   );
 }

@@ -42,6 +42,20 @@ Multi-step process to prevent phantom records:
 
 See [media_presign_upload.py](backend/src/handlers/media_presign_upload.py) and [media_complete.py](backend/src/handlers/media_complete.py).
 
+## CloudFront Media Distribution
+
+Media is served through CloudFront with signed URLs (RSA-SHA1) for secure access:
+
+- **Distribution Domain**: `d2t84d8g2oon37.cloudfront.net` (can be aliased to custom domain via CNAME)
+- **Custom Domain Ready**: `media.teammediahub.co` (requires Route 53 CNAME + ACM cert)
+- **Signing**: [cloudfront_signer.py](backend/src/common/cloudfront_signer.py) generates URLs with policy + signature + key pair ID
+- **Key Pair ID**: `KA8HYSZ5B0ORO` (stored in Lambda env via CDK)
+- **TTL**: 15 minutes (900 seconds) for all signed URLs
+- **S3 Origin**: Private bucket (OAI access only) - users cannot access S3 directly
+- **All Media Access**: Preview images in `/media/list`, downloads via `/media/presign-download`, thumbnails auto-generated
+
+Preview URLs sent to clients are CloudFront signed URLs (not S3 presigned URLs). This allows CDK to manage certificate rotation and domain aliasing centrally.
+
 ## Development Workflow
 
 ### Local Backend Testing
@@ -79,7 +93,19 @@ Frontend requires `VITE_API_BASE_URL` in [frontend/.env](frontend/.env) pointing
 ### Frontend Patterns
 - **API calls**: Use [lib/api.ts](frontend/src/lib/api.ts) request wrapper which auto-injects `x-invite-token`
 - **Auth state**: Access via `useAuth()` hook from [AuthContext](frontend/src/contexts/AuthContext.tsx)
-- **Media URLs**: Use [mediaUrlCache.ts](frontend/src/lib/mediaUrlCache.ts) to manage presigned download URL lifecycles
+- **Media URLs**: CloudFront signed URLs managed by [mediaUrlCache.ts](frontend/src/lib/mediaUrlCache.ts)
+- **Routing**: Manual client-side routing in [App.tsx](frontend/src/App.tsx) with role-based nav (`/coach/dashboard`, `/team/...`, `/invite/...`)
+- **UI Layouts**: 
+  - [Feed.tsx](frontend/src/pages/Feed.tsx) - V2 Premium layout with featured album, media grid, invite share card
+  - [AppPage.tsx](frontend/src/pages/AppPage.tsx) - Standard media gallery view
+  - [AppShell.tsx](frontend/src/components/AppShell.tsx) - Header with TMH brand button + role-based dropdowns
+- **PWA Features**: Installed via [vite.config.ts](frontend/vite.config.ts) using vite-plugin-pwa
+  - Service worker precaches app shell (HTML/CSS/JS) + runtime caches media URLs
+  - Network-first for navigation, cache-first for assets
+  - Large screenshot files excluded from precaching (>3MB limit)
+- **Install Prompts**:
+  - Android: [InstallPrompt.tsx](frontend/src/components/InstallPrompt.tsx) - listens for `beforeinstallprompt`, shows banner
+  - iOS: [IOSInstallModal.tsx](frontend/src/components/IOSInstallModal.tsx) - modal with manual install steps, checks `tmh_invite_token` in localStorage
 
 ### Routing
 Lambda routing is explicit in [main.py](backend/src/main.py) `handler()` - no framework magic. Each route is an `if method == X and path == Y` block.
@@ -97,9 +123,17 @@ Requires Pillow in Lambda layer ([layer_pillow/](layer_pillow/)).
 ## CDK Infrastructure Notes
 
 - **Parameters**: `DemoEnabled`, `DemoTeamId` allow public demo mode (see [team_media_hub_stack.py](infra/stacks/team_media_hub_stack.py#L28-L55))
-- **Environment vars**: Lambda gets table names + bucket name from CDK outputs
+- **Lambda Layers**: 
+  - Cryptography layer for CloudFront RSA-SHA1 signing (built dynamically via `build_layers.sh`)
+  - Pillow layer for thumbnail generation
+- **Media Distribution**: CloudFront distribution with:
+  - S3 origin (private bucket with OAI)
+  - SPA routing (404 → index.html for 200 OK)
+  - Domain name stored in Lambda env via `CLOUDFRONT_DOMAIN` (auto-configured)
+- **Environment vars**: Lambda gets table names + bucket name + CloudFront domain + key pair ID from CDK outputs
 - **CORS**: Both S3 and API Gateway have CORS configured (currently `*` for origins)
 - **Removal policies**: `DESTROY` with `auto_delete_objects=True` - **NOT production-safe**
+- **Deployment**: GitHub Actions triggers on main push with AWS OIDC (no long-lived credentials)
 
 ## Testing
 - No unit test framework yet
@@ -107,7 +141,28 @@ Requires Pillow in Lambda layer ([layer_pillow/](layer_pillow/)).
 - Frontend has no test suite
 
 ## Security Model
-- No AWS credentials in frontend - all S3 access via presigned URLs
-- Tokens are SHA256 hashed before storage
-- Audit logs never store raw tokens/IPs/UAs
-- S3 bucket is private; CloudFront serves content via presigned URLs from API
+- No AWS credentials in frontend - all S3 access via CloudFront signed URLs
+- Tokens are SHA256 hashed before storage in DynamoDB
+- Audit logs never store raw tokens/IPs/UAs (all hashed)
+- S3 bucket is private; CloudFront serves content via signed URLs from API
+- Service worker caches app shell + media URLs but never caches signed URLs (network-only)
+
+## Role-Based Features
+
+**Coach Role**:
+- Access to teams they manage via `/coach/dashboard`
+- Can switch between teams using [CoachTeamsDropdown.tsx](frontend/src/components/CoachTeamsDropdown.tsx)
+- Receives `coach_token` from team creation (different from invite tokens)
+- Can manage invites, upload media, view analytics
+
+**Parent Role**:
+- Access via `/team/{teamId}` after invite token auth
+- Can only view/download media from teams they're invited to
+- Team switching via [ParentSwitchTeamMenu.tsx](frontend/src/components/ParentSwitchTeamMenu.tsx) (join another team option)
+- Read-only or uploader depending on invite permissions
+
+**UI Routing**:
+- `/invite/...` - Public landing page for new team members
+- `/coach/dashboard` - Coach home page listing all their teams  
+- `/team/{teamId}` - Media gallery for specific team (coach or parent)
+- `AppShell` header: TMH button navigates to home (`/coach/dashboard` for coaches, `/team/...` for parents)
