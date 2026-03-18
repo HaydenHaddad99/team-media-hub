@@ -69,19 +69,26 @@ export function JoinTeam() {
     }
   }
 
-  const content = step === "verify" ? (
-    <div className="container joinTeamCard" style={{ maxWidth: 480, padding: 24 }}>
-      <h1 style={{ fontSize: 28, marginBottom: 12 }}>Check Your Email</h1>
-      <p style={{ color: "#888", marginBottom: 32 }}>
-        We sent a 6-digit code to <strong>{email}</strong>
-      </p>
+  const title = step === "verify" ? "Check Your Email" : "Join Your Team";
+  const description =
+    step === "verify"
+      ? `We sent a 6-digit code to ${email}. Enter it below to open your team feed.`
+      : "Use your email and team code to access your team's private photos and videos.";
 
-      <form onSubmit={handleVerify}>
-        <div className="form-group">
-          <label>Verification Code</label>
+  const content = step === "verify" ? (
+    <section className="joinTeamCard" aria-labelledby="join-team-title">
+      <div className="joinTeamCardHeader">
+        <span className="joinTeamEyebrow">Secure Access</span>
+        <h1 id="join-team-title" className="joinTeamTitle">{title}</h1>
+        <p className="joinTeamDescription">{description}</p>
+      </div>
+
+      <form className="joinTeamForm" onSubmit={handleVerify}>
+        <div className="joinTeamField">
+          <label className="joinTeamLabel">Verification Code</label>
           <input
             type="text"
-            className="input"
+            className="input joinTeamInput"
             placeholder="123456"
             value={verificationCode}
             onChange={(e) => setVerificationCode(e.target.value)}
@@ -93,38 +100,36 @@ export function JoinTeam() {
         </div>
 
         {error && (
-          <div className="alert alert-error" style={{ marginBottom: 16 }}>
-            {error}
-          </div>
+          <div className="joinTeamError">{error}</div>
         )}
 
-        <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: "100%", marginBottom: 12 }}>
+        <button type="submit" className="btn btn-primary joinTeamButton" disabled={loading}>
           {loading ? "Verifying..." : `Join ${teamName}`}
         </button>
 
         <button
           type="button"
-          className="btn"
+          className="btn joinTeamButton joinTeamSecondaryButton"
           onClick={() => setStep("email")}
-          style={{ width: "100%" }}
         >
           Back
         </button>
       </form>
-    </div>
+    </section>
   ) : (
-    <div className="container joinTeamCard" style={{ maxWidth: 480, padding: 24 }}>
-      <h1 style={{ fontSize: 28, marginBottom: 12 }}>Join Team</h1>
-      <p style={{ color: "#888", marginBottom: 32 }}>
-        Enter your email and team code to get started
-      </p>
+    <section className="joinTeamCard" aria-labelledby="join-team-title">
+      <div className="joinTeamCardHeader">
+        <span className="joinTeamEyebrow">Private Family Feed</span>
+        <h1 id="join-team-title" className="joinTeamTitle">{title}</h1>
+        <p className="joinTeamDescription">{description}</p>
+      </div>
 
-      <form onSubmit={handleRequestCode}>
-        <div className="form-group">
-          <label>Email</label>
+      <form className="joinTeamForm" onSubmit={handleRequestCode}>
+        <div className="joinTeamField">
+          <label className="joinTeamLabel">Email</label>
           <input
             type="email"
-            className="input"
+            className="input joinTeamInput"
             placeholder="parent@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -132,38 +137,53 @@ export function JoinTeam() {
           />
         </div>
 
-        <div className="form-group">
-          <label>Team Code</label>
+        <div className="joinTeamField">
+          <label className="joinTeamLabel">Team Code</label>
           <input
             type="text"
-            className="input"
+            className="input joinTeamInput"
             placeholder="DALLAS-11B"
             value={teamCode}
             onChange={(e) => setTeamCode(e.target.value.toUpperCase())}
             required
           />
-          <small style={{ color: "#666", fontSize: 13 }}>
+          <small className="joinTeamHint">
             Ask your coach for the team code
           </small>
         </div>
 
         {error && (
-          <div className="alert alert-error" style={{ marginBottom: 16 }}>
-            {error}
-          </div>
+          <div className="joinTeamError">{error}</div>
         )}
 
-        <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: "100%" }}>
+        <button type="submit" className="btn btn-primary joinTeamButton" disabled={loading}>
           {loading ? "Sending..." : "Continue"}
         </button>
       </form>
-    </div>
+    </section>
   );
 
   return (
     <div className="joinTeamPage">
       <PublicNav />
-      <div className="joinTeamCenter">{content}</div>
+      <div className="joinTeamCenter">
+        <div className="joinTeamLayout">
+          <section className="joinTeamIntro" aria-label="Join team introduction">
+            <span className="joinTeamIntroBadge">Team Media Hub</span>
+            <h2 className="joinTeamIntroTitle">Fast access for parents and family members.</h2>
+            <p className="joinTeamIntroText">
+              Enter your team code, verify your email, and open a private feed built for sharing game-day photos,
+              videos, and updates without juggling group texts.
+            </p>
+            <ul className="joinTeamIntroList">
+              <li>One-time verification code sent to your email</li>
+              <li>Private access scoped to the team your coach invited you to</li>
+              <li>Works on phone, tablet, and desktop</li>
+            </ul>
+          </section>
+          {content}
+        </div>
+      </div>
     </div>
   );
 }
