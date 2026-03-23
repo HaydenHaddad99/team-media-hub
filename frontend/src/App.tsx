@@ -8,6 +8,7 @@ import { CoachDashboard } from "./pages/CoachDashboard";
 import { Privacy } from "./pages/Privacy";
 import { Terms } from "./pages/Terms";
 import { Contact } from "./pages/Contact";
+import { About } from "./pages/About";
 import { CreateTeamForm } from "./components/CreateTeamForm";
 import { SetupKeyPrompt } from "./components/SetupKeyPrompt";
 import { AppShell } from "./components/AppShell";
@@ -28,6 +29,7 @@ export default function App() {
     if (path === "/privacy") return "privacy";
     if (path === "/terms") return "terms";
     if (path === "/contact") return "contact";
+    if (path === "/about") return "about";
     if (path === "/create-team") return "create-team";
     if (path === "/coach/setup-key") return "coach-setup-key";
     if (path === "/coach/signin") return "coach-signin";
@@ -72,6 +74,8 @@ export default function App() {
         setCurrentPage("terms");
       } else if (path === "/contact") {
         setCurrentPage("contact");
+      } else if (path === "/about") {
+        setCurrentPage("about");
       } else if (path === "/create-team") {
         setCurrentPage("create-team");
         setSetupKey(""); // Reset setup key when navigating to create-team
@@ -160,6 +164,10 @@ export default function App() {
 
   if (currentPage === "contact") {
     return <Contact />;
+  }
+
+  if (currentPage === "about") {
+    return <About />;
   }
 
   // Coach sign-in flow
