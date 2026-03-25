@@ -34,22 +34,27 @@ def query_gsi(table_name: str, index_name: str, key_condition, limit: int = 1) -
     items = [_normalize(i) for i in resp.get("Items", [])]
     return items[0] if items else None
 
-def query_items(table_name: str, key_condition: str = None, expression_values: dict = None, index_name: str = None, limit: int = 50) -> Tuple[list, None]:
+def query_items(table_name: str, key_condition = None, expression_values: dict = None, index_name: str = None, limit: int = 50) -> Tuple[list, None]:
     """
     Generic query helper with support for expression attribute values and GSI.
+    Accepts either a string key_condition with expression_values, or a boto3
+    Key condition object directly.
     
     Example:
         query_items(TABLE_USERS, key_condition="email = :email", 
                    expression_values={":email": "user@example.com"}, 
                    index_name="email-index")
+        query_items(TABLE_TEAM_MEMBERS, Key("user_id").eq(uid) & Key("team_id").eq(tid))
     """
+    from boto3.dynamodb.conditions import ConditionBase
     kwargs = {"Limit": limit}
     
-    if key_condition and expression_values:
+    if isinstance(key_condition, ConditionBase):
+        # boto3 Key condition object passed directly
+        kwargs["KeyConditionExpression"] = key_condition
+    elif key_condition and expression_values:
         # Build KeyConditionExpression from string
-        # This is a simplified version - for production use boto3.dynamodb.conditions
-        from boto3.dynamodb.conditions import Key, Attr
-        # Parse simple conditions like "email = :email" or "user_id = :uid"
+        from boto3.dynamodb.conditions import Key
         parts = key_condition.replace("=", " = ").split()
         if len(parts) >= 3:
             attr_name = parts[0]

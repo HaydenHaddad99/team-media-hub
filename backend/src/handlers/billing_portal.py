@@ -46,7 +46,7 @@ def handle_billing_portal(event):
     
     # Verify user is admin/coach for this team
     from boto3.dynamodb.conditions import Key
-    member_items = query_items(
+    member_items, _ = query_items(
         TABLE_TEAM_MEMBERS,
         Key("user_id").eq(user_id) & Key("team_id").eq(team_id),
     )
