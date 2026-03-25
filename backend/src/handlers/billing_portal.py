@@ -68,7 +68,7 @@ def handle_billing_portal(event):
     # Create portal session
     try:
         session = create_portal_session(team)
-        write_audit(team_id, "billing_portal_created", user_id=user_id)
+        write_audit(team_id, "billing_portal_created", invite_token=None, meta={"user_id": user_id})
         return ok({"url": session.get("url")})
     except ValueError as e:
         return err(str(e), 400, code="validation_error")
