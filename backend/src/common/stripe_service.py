@@ -313,14 +313,17 @@ def create_portal_session(team: Dict) -> Dict:
 def _update_team(team_id: str, fields: Dict) -> None:
     expression = []
     values = {}
+    names = {}
     remove_fields = []
     
     for key, value in fields.items():
+        alias = f"#{key}"
+        names[alias] = key
         if value is None:
             # Use REMOVE for null values to clean up fields
-            remove_fields.append(key)
+            remove_fields.append(alias)
         else:
-            expression.append(f"{key} = :{key}")
+            expression.append(f"{alias} = :{key}")
             values[f":{key}"] = value
 
     if not expression and not remove_fields:
@@ -339,4 +342,5 @@ def _update_team(team_id: str, fields: Dict) -> None:
         {"team_id": team_id},
         update_expr,
         values,
+        names,
     )

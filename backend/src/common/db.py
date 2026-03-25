@@ -104,7 +104,7 @@ def query_media_by_id(table_name: str, media_id: str):
 def delete_item(table_name: str, key: dict):
     table(table_name).delete_item(Key=key)
 
-def update_item(table_name: str, key: Dict[str, Any], update_expression: str, expression_values: Dict[str, Any] = None) -> None:
+def update_item(table_name: str, key: Dict[str, Any], update_expression: str, expression_values: Dict[str, Any] = None, expression_names: Dict[str, str] = None) -> None:
     """
     Update an item in a DynamoDB table.
     
@@ -120,6 +120,8 @@ def update_item(table_name: str, key: Dict[str, Any], update_expression: str, ex
     }
     if expression_values:
         kwargs["ExpressionAttributeValues"] = expression_values
+    if expression_names:
+        kwargs["ExpressionAttributeNames"] = expression_names
     
     table(table_name).update_item(**kwargs)
 
