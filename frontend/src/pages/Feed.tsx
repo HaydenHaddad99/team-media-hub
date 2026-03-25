@@ -27,11 +27,11 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
   const [billingBusy, setBillingBusy] = useState<boolean>(false);
   const [billingMsg, setBillingMsg] = useState<string | null>(null);
 
-  const role = me?.invite?.role || "viewer";
-  const canUpload = role === "uploader" || role === "admin";
-  const isAdmin = role === "admin";
+  const role = me?.invite?.role || localStorage.getItem("tmh_role") || "viewer";
+  const canUpload = role === "uploader" || role === "admin" || role === "coach";
+  const isAdmin = role === "admin" || role === "coach";
   const isCoach = !!localStorage.getItem("tmh_user_token");
-  const canManageBilling = isCoach && isAdmin;  // Only coaches with admin role can manage billing
+  const canManageBilling = isCoach && isAdmin;
   const teamId = me?.team?.team_id || "";
 
   // Get unique albums from items
