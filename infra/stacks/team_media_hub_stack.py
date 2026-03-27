@@ -20,8 +20,11 @@ from aws_cdk import (
 )
 
 class TeamMediaHubStack(Stack):
-    def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
+    def __init__(self, scope: Construct, construct_id: str, stage: str = "prod", **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
+
+        self.stage = stage
+        is_staging = stage != "prod"
 
         # -------------------------
         # CloudFormation Parameters

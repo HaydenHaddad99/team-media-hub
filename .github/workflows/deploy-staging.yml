@@ -1,26 +1,21 @@
-name: Deploy
+name: Deploy Staging
 
 on:
   push:
-    branches: [main]
+    branches: [staging]
+  workflow_dispatch:  # Allow manual trigger from GitHub UI
 
 permissions:
   id-token: write
   contents: read
 
 jobs:
-  deploy:
+  deploy-staging:
     runs-on: ubuntu-latest
+    environment: staging
     
     steps:
       - uses: actions/checkout@v4
-
-      - name: Debug OIDC token claims
-        run: |
-          resp=$(curl -sSL -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com")
-          token=$(echo "$resp" | jq -r '.value')
-          payload=$(echo "$token" | cut -d. -f2)
-          echo "$payload" | base64 -d 2>/dev/null | jq . || echo "$payload===" | base64 -d | jq .
       
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
@@ -38,9 +33,9 @@ jobs:
         with:
           node-version: "20"
       
-      - name: Build frontend
+      - name: Build frontend (staging)
         env:
-          VITE_API_BASE_URL: https://5gt1117eh5.execute-api.us-east-1.amazonaws.com
+          VITE_API_BASE_URL: ${{ vars.STAGING_API_BASE_URL }}
         run: |
           cd frontend
           npm install
@@ -52,7 +47,6 @@ jobs:
           mkdir -p layers/stripe/python
           python -m pip install -q stripe -t layers/stripe/python
           test -d layers/stripe/python/stripe
-          PYTHONPATH=layers/stripe/python python -c "import stripe; print(stripe.VERSION)"
 
       - name: Build Cryptography Lambda layer
         run: |
@@ -60,11 +54,10 @@ jobs:
           mkdir -p layers/cryptography/python
           python -m pip install -q cryptography -t layers/cryptography/python
           test -d layers/cryptography/python/cryptography
-          PYTHONPATH=layers/cryptography/python python -c "import cryptography; print(cryptography.__version__)"
       
-      - name: Deploy with CDK
+      - name: Deploy staging stack with CDK
         env:
-          DEPLOY_STAGE: prod
+          DEPLOY_STAGE: staging
           SETUP_KEY: ${{ secrets.SETUP_KEY }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
@@ -80,4 +73,4 @@ jobs:
           npm install -g aws-cdk
           cd infra
           python -m pip install -q -r requirements.txt
-          cdk deploy TeamMediaHubStack --require-approval never
+          cdk deploy TeamMediaHubStack-Staging --require-approval never
