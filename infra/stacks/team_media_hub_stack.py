@@ -356,7 +356,12 @@ class TeamMediaHubStack(Stack):
                     apigwv2.CorsHttpMethod.DELETE,
                     apigwv2.CorsHttpMethod.OPTIONS,
                 ],
-                allow_origins=["https://app.teammediahub.co"],  # Custom domain
+                allow_origins=[
+                    "https://app.teammediahub.co",
+                    "https://d1slhl30hwmy0i.cloudfront.net",
+                ] if is_staging else [
+                    "https://app.teammediahub.co",
+                ],
                 max_age=Duration.days(10),
             ),
         )
