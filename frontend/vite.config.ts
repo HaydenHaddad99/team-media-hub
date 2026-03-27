@@ -30,6 +30,11 @@ export default defineConfig({
         // Cache app shell only
         runtimeCaching: [
           {
+            // Never cache CloudFront signed URLs (thumbnails, previews, media)
+            urlPattern: /\.cloudfront\.net\//,
+            handler: 'NetworkOnly',
+          },
+          {
             urlPattern: /^https:\/\/app\.teammediahub\.co\/.+/,
             handler: 'NetworkFirst',
             options: {
@@ -40,7 +45,6 @@ export default defineConfig({
               },
             },
           },
-          // DO NOT cache media URLs - they have signed queries
           // DO NOT cache API calls - always fetch fresh
         ],
         // Explicitly exclude media and API domains
