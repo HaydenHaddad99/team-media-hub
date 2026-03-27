@@ -112,4 +112,55 @@ describe('api module', () => {
       expect(capturedUrl).toBe('https://api.test.example.com/health')
     })
   })
+
+  describe('listMedia', () => {
+    it('returns CloudFront thumb_url without modification', async () => {
+      api.setStoredToken('test-token')
+
+      const mockItems = [
+        {
+          team_id: 't1', media_id: 'm1', object_key: 'media/t1/m1/photo.jpg',
+          filename: 'photo.jpg', content_type: 'image/jpeg', size_bytes: 1000,
+          created_at: 1000,
+          thumb_url: 'https://d2t84d8g2oon37.cloudfront.net/thumbnails/t1/m1/thumb.jpg?Signature=abc',
+          preview_url: 'https://d2t84d8g2oon37.cloudfront.net/previews/t1/m1/preview.jpg?Signature=abc',
+        },
+      ]
+
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: () => Promise.resolve(JSON.stringify({ items: mockItems, next_cursor: null })),
+      }))
+
+      const result = await api.listMedia()
+      // thumb_url should be the full CloudFront URL, not modified
+      expect(result.items[0].thumb_url).toBe(mockItems[0].thumb_url)
+      expect(result.items[0].thumb_url).toContain('cloudfront.net')
+      expect(result.items[0].thumb_url).not.toContain('/media/thumbnail')
+    })
+
+    it('returns null thumb_url when no thumbnail exists', async () => {
+      api.setStoredToken('test-token')
+
+      const mockItems = [
+        {
+          team_id: 't1', media_id: 'm1', object_key: 'media/t1/m1/video.mp4',
+          filename: 'video.mp4', content_type: 'video/mp4', size_bytes: 5000,
+          created_at: 1000,
+          thumb_url: null,
+          preview_url: null,
+        },
+      ]
+
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: () => Promise.resolve(JSON.stringify({ items: mockItems, next_cursor: null })),
+      }))
+
+      const result = await api.listMedia()
+      expect(result.items[0].thumb_url).toBeNull()
+    })
+  })
 })

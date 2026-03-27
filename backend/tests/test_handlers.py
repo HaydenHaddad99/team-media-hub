@@ -92,11 +92,11 @@ class TestMeHandler:
 # /media  (list)
 # ---------------------------------------------------------------------------
 class TestMediaListHandler:
-    def _seed(self, aws, team_id="team-ml", count=3):
+    def _seed(self, aws, team_id="team-ml", count=3, with_thumbs=False):
         token, h, record = make_invite_token(team_id, role="viewer", token="list-tok")
         aws["invites_table"].put_item(Item=record)
         for i in range(count):
-            aws["media_table"].put_item(Item={
+            item = {
                 "team_id": team_id,
                 "sk": f"{1000 + i}#ml-{i}",
                 "media_id": f"ml-{i}",
@@ -104,7 +104,11 @@ class TestMediaListHandler:
                 "filename": f"photo-{i}.jpg",
                 "content_type": "image/jpeg",
                 "object_key": f"media/{team_id}/ml-{i}/photo-{i}.jpg",
-            })
+            }
+            if with_thumbs:
+                item["thumb_key"] = f"thumbnails/{team_id}/ml-{i}/thumb.jpg"
+                item["preview_key"] = f"previews/{team_id}/ml-{i}/preview.jpg"
+            aws["media_table"].put_item(Item=item)
         return "list-tok"
 
     def test_lists_media(self, aws):
@@ -119,6 +123,38 @@ class TestMediaListHandler:
         event = make_event(method="GET", path="/media")
         resp = handle_media_list(event)
         assert resp["statusCode"] == 401
+
+    @patch("handlers.media_list.create_signed_url", return_value="https://dtest.cloudfront.net/signed-thumb")
+    def test_thumb_url_is_cloudfront_signed(self, mock_sign, aws):
+        """Thumbnails must be served via CloudFront signed URL (not Lambda proxy)."""
+        token = self._seed(aws, team_id="team-cf", with_thumbs=True)
+        event = make_event(method="GET", path="/media", headers={"x-invite-token": token})
+        resp = handle_media_list(event)
+        body = json.loads(resp["body"])
+        for item in body["items"]:
+            assert item["thumb_url"] == "https://dtest.cloudfront.net/signed-thumb"
+            assert "/media/thumbnail" not in item["thumb_url"]
+
+    @patch("handlers.media_list.create_signed_url", return_value="https://dtest.cloudfront.net/signed")
+    def test_no_thumb_url_when_no_thumb_key(self, mock_sign, aws):
+        """Items without thumb_key should have thumb_url=None."""
+        token = self._seed(aws, team_id="team-no-thumb", with_thumbs=False)
+        event = make_event(method="GET", path="/media", headers={"x-invite-token": token})
+        resp = handle_media_list(event)
+        body = json.loads(resp["body"])
+        for item in body["items"]:
+            assert item["thumb_url"] is None
+
+    @patch("handlers.media_list.create_signed_url", return_value="https://dtest.cloudfront.net/signed")
+    def test_preview_url_is_cloudfront_signed(self, mock_sign, aws):
+        """Preview images must also be CloudFront signed URLs."""
+        token = self._seed(aws, team_id="team-prev", with_thumbs=True)
+        event = make_event(method="GET", path="/media", headers={"x-invite-token": token})
+        resp = handle_media_list(event)
+        body = json.loads(resp["body"])
+        for item in body["items"]:
+            assert item["preview_url"] is not None
+            assert item["preview_url"].startswith("https://dtest.cloudfront.net/")
 
 
 # ---------------------------------------------------------------------------
