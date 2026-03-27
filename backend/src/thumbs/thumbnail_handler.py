@@ -1,10 +1,19 @@
 import io
 import os
 import re
+import time
 import boto3
 import logging
+from botocore.exceptions import ClientError
 from urllib.parse import unquote_plus
 from PIL import Image
+
+# Register HEIC/HEIF support if pillow-heif is available in the layer
+try:
+    import pillow_heif
+    pillow_heif.register_heif_opener()
+except ImportError:
+    pass
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -141,7 +150,27 @@ def handler(event, context):
         if not parsed:
             continue
 
-        head = s3.head_object(Bucket=bucket, Key=key)
+        # Retry head_object with backoff — S3 notifications can arrive
+        # before the object is fully visible (eventual consistency edge case)
+        head = None
+        for attempt in range(4):
+            try:
+                head = s3.head_object(Bucket=bucket, Key=key)
+                break
+            except ClientError as e:
+                if e.response["Error"]["Code"] in ("404", "NoSuchKey"):
+                    if attempt < 3:
+                        wait = 2 ** attempt  # 1s, 2s, 4s
+                        logger.info(f"head_object 404 for {key}, retry {attempt + 1}/3 in {wait}s")
+                        time.sleep(wait)
+                    else:
+                        logger.error(f"head_object 404 after 4 attempts for {key}, skipping")
+                else:
+                    logger.error(f"head_object error for {key}: {e}")
+                    break
+
+        if not head:
+            continue
         content_type = head.get("ContentType", "") or ""
         if not _is_image(content_type):
             continue

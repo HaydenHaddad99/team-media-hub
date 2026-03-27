@@ -38,6 +38,12 @@ jobs:
         with:
           node-version: "20"
       
+      - name: Run backend tests
+        run: |
+          cd backend
+          python -m pip install -q -r requirements.txt -r requirements-test.txt Pillow
+          python -m pytest tests/ -v
+
       - name: Build frontend
         env:
           VITE_API_BASE_URL: https://5gt1117eh5.execute-api.us-east-1.amazonaws.com
@@ -45,6 +51,11 @@ jobs:
           cd frontend
           npm install
           npm run build
+
+      - name: Run frontend tests
+        run: |
+          cd frontend
+          npx vitest run
 
       - name: Build Stripe Lambda layer
         run: |
