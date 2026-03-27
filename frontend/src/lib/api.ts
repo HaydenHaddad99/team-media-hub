@@ -133,16 +133,6 @@ export async function listMedia(params?: { limit?: number; cursor?: string | nul
     method: "GET",
   });
   
-  // Convert relative thumbnail URLs to absolute URLs with auth token
-  const token = getStoredToken();
-  data.items.forEach(item => {
-    if (item.thumb_url && item.thumb_url.startsWith("/")) {
-      const sep = item.thumb_url.includes("?") ? "&" : "?";
-      const tokenParam = token ? `${sep}token=${encodeURIComponent(token)}` : "";
-      item.thumb_url = `${API_BASE_URL}${item.thumb_url}${tokenParam}`;
-    }
-  });
-  
   return data;
 }
 

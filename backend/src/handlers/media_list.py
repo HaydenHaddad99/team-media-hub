@@ -21,18 +21,29 @@ def handle_media_list(event):
 
     items, next_cursor = query_media_items(TABLE_MEDIA, team_id=team_id, limit=limit, cursor=cursor)
 
-    # Add thumbnail URLs - frontend will fetch via /media/thumbnail endpoint
-    # Add preview URLs - CloudFront signed URLs for fast modal viewing
+    # Add CloudFront signed URLs for thumbnails and previews
     for it in items:
-        media_id = it.get("media_id")
-        if it.get("thumb_key") and media_id:
-            it["thumb_url"] = f"/media/thumbnail?media_id={media_id}"
+        content_type = it.get("content_type", "")
+
+        # Thumbnail URL via CloudFront signed URL (direct CDN, works in all browsers)
+        thumb_key = it.get("thumb_key")
+        if thumb_key:
+            try:
+                it["thumb_url"] = create_signed_url(
+                    domain_name=CLOUDFRONT_DOMAIN,
+                    object_key=thumb_key,
+                    key_pair_id=CLOUDFRONT_KEY_PAIR_ID,
+                    private_key_pem=CLOUDFRONT_PRIVATE_KEY,
+                    expires_in_seconds=3600,
+                )
+            except Exception as e:
+                print(f"Failed to create CloudFront signed URL for thumbnail: {e}")
+                it["thumb_url"] = None
         else:
             it["thumb_url"] = None
-        
-        # Generate CloudFront signed URL for preview images (not videos)
+
+        # Preview URL via CloudFront signed URL for images
         preview_key = it.get("preview_key") or it.get("object_key")
-        content_type = it.get("content_type", "")
         if preview_key and content_type.startswith("image/"):
             try:
                 it["preview_url"] = create_signed_url(
