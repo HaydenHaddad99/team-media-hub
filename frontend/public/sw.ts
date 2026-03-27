@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 declare const self: ServiceWorkerGlobalScope;
 
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const APP_SHELL_CACHE = `tmh-app-shell-${CACHE_VERSION}`;
 const OFFLINE_FALLBACK = '/offline.html';
 
@@ -48,14 +48,21 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Never cache media URLs (CloudFront signed URLs)
-  if (url.hostname === 'media.teammediahub.co' || url.search.includes('Policy=') || url.search.includes('Signature=')) {
+  // Never cache CloudFront signed media URLs (thumbnails, previews, downloads)
+  // Match by CloudFront domain patterns OR signed URL query parameters
+  if (
+    url.hostname.endsWith('.cloudfront.net') ||
+    url.hostname === 'media.teammediahub.co' ||
+    url.searchParams.has('Policy') ||
+    url.searchParams.has('Signature') ||
+    url.searchParams.has('Key-Pair-Id')
+  ) {
     event.respondWith(fetch(request).catch(() => caches.match(OFFLINE_FALLBACK) || new Response('Offline - Media unavailable')));
     return;
   }
 
   // Never cache API calls
-  if (url.hostname === 'api.teammediahub.co' || request.method !== 'GET') {
+  if (url.hostname.includes('execute-api.') || url.hostname === 'api.teammediahub.co' || request.method !== 'GET') {
     event.respondWith(fetch(request).catch(() => caches.match(OFFLINE_FALLBACK) || new Response('Offline - API unavailable')));
     return;
   }
