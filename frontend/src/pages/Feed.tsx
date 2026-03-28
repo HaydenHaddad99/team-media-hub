@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { listMedia, MediaItem, clearStoredToken, getMe, MeResponse, presignDownload, deleteMedia, getUploaderIdentifier, createBillingCheckoutSession, upgradeBillingSubscription, createBillingPortalSession } from "../lib/api";
 import { getHomeRoute, navigate } from "../lib/navigation";
@@ -54,17 +54,37 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
     : `${usedGB.toFixed(2)} GB`;
   const limitText = `${storageLimitGB} GB`;
 
+  const refreshingRef = useRef(false);
+
   async function refresh() {
+    if (refreshingRef.current) return;
+    refreshingRef.current = true;
     try {
       setErr(null);
       setLoading(true);
-      const res = await listMedia({ limit: 30 });
-      setItems(res.items || []);
-      setNextCursor(res.next_cursor || null);
+      setItems([]);
+
+      // First page — small batch so skeleton disappears fast
+      const first = await listMedia({ limit: 12 });
+      const firstItems = first.items || [];
+      setItems(firstItems);
+      setLoading(false);
+
+      // Background-fetch remaining pages and append as they arrive
+      let cursor = first.next_cursor;
+      while (cursor) {
+        const next = await listMedia({ limit: 30, cursor });
+        const nextItems = next.items || [];
+        if (nextItems.length === 0) break;
+        setItems(prev => [...prev, ...nextItems]);
+        cursor = next.next_cursor;
+      }
+      setNextCursor(null); // all pages loaded automatically
     } catch (ex: any) {
       setErr(ex?.message || "Failed to load media");
-    } finally {
       setLoading(false);
+    } finally {
+      refreshingRef.current = false;
     }
   }
 
