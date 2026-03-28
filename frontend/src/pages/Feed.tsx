@@ -625,7 +625,7 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
 
                   {!canManageBilling && usagePercent >= 80 && (
                     <div className="feed-v2-storage-parent-warning">
-                      Storage is getting full — please notify your coach to upgrade.
+                      Storage is getting full — please notify your admin to upgrade.
                     </div>
                   )}
                 </>

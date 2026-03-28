@@ -61,7 +61,7 @@ export function LandingPageNew({ onReady }: LandingPageNewProps) {
               onClick={handleCoachSignInClick}
               className="link-button"
             >
-              Coach sign-in
+              Admin sign-in
             </button>
           </p>
         </div>
@@ -101,7 +101,7 @@ export function LandingPageNew({ onReady }: LandingPageNewProps) {
 
       {/* Testimonials (optional - add real quotes later) */}
       <section className="testimonials">
-        <h2>What coaches say</h2>
+        <h2>What team managers say</h2>
         <div className="testimonial-card">
           <p>"Finally, a place where parents can upload photos without worrying about privacy. Our whole team loves it."</p>
           <div className="testimonial-author">— Coach Mike, U10 Soccer</div>
