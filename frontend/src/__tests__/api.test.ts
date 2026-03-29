@@ -163,4 +163,72 @@ describe('api module', () => {
       expect(result.items[0].thumb_url).toBeNull()
     })
   })
+
+  describe('putFileToPresignedUrl', () => {
+    function fakeFile(name: string, type: string, content = 'data'): File {
+      const blob = new Blob([content], { type })
+      Object.defineProperty(blob, 'name', { value: name })
+      return blob as File
+    }
+
+    it('makes a PUT request to the provided upload URL', async () => {
+      let capturedUrl = ''
+      let capturedMethod = ''
+      vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string, opts: any) => {
+        capturedUrl = url
+        capturedMethod = opts.method
+        return Promise.resolve({ ok: true, status: 200 })
+      }))
+
+      const file = fakeFile('photo.jpg', 'image/jpeg')
+      await api.putFileToPresignedUrl('https://s3.example.com/bucket/key?Signature=abc', file, 'image/jpeg')
+
+      expect(capturedUrl).toBe('https://s3.example.com/bucket/key?Signature=abc')
+      expect(capturedMethod).toBe('PUT')
+    })
+
+    it('sends the correct content-type header matching what was presigned', async () => {
+      let capturedHeaders: Record<string, string> = {}
+      vi.stubGlobal('fetch', vi.fn().mockImplementation((_url: string, opts: any) => {
+        capturedHeaders = opts.headers
+        return Promise.resolve({ ok: true, status: 200 })
+      }))
+
+      const file = fakeFile('photo.jpg', 'image/jpeg')
+      await api.putFileToPresignedUrl('https://s3.example.com/upload', file, 'image/jpeg')
+
+      expect(capturedHeaders['content-type']).toBe('image/jpeg')
+    })
+
+    it('sends the file as the request body', async () => {
+      let capturedBody: any = null
+      vi.stubGlobal('fetch', vi.fn().mockImplementation((_url: string, opts: any) => {
+        capturedBody = opts.body
+        return Promise.resolve({ ok: true, status: 200 })
+      }))
+
+      const file = fakeFile('video.mp4', 'video/mp4')
+      await api.putFileToPresignedUrl('https://s3.example.com/upload', file, 'video/mp4')
+
+      expect(capturedBody).toBe(file)
+    })
+
+    it('throws when S3 returns a non-ok status', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 403 }))
+
+      const file = fakeFile('photo.jpg', 'image/jpeg')
+      await expect(
+        api.putFileToPresignedUrl('https://s3.example.com/upload', file, 'image/jpeg')
+      ).rejects.toThrow('Upload failed (403)')
+    })
+
+    it('propagates network errors (e.g. CORS block) as thrown exceptions', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+
+      const file = fakeFile('photo.jpg', 'image/jpeg')
+      await expect(
+        api.putFileToPresignedUrl('https://s3.example.com/upload', file, 'image/jpeg')
+      ).rejects.toThrow('Failed to fetch')
+    })
+  })
 })

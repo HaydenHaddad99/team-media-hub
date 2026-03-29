@@ -100,7 +100,12 @@ class TeamMediaHubStack(Stack):
                         s3.HttpMethods.PUT,
                         s3.HttpMethods.POST,
                     ],
-                    allowed_origins=["https://app.teammediahub.co"],  # Custom domain
+                    allowed_origins=[
+                        "https://app.teammediahub.co",
+                        "https://d1slhl30hwmy0i.cloudfront.net",  # Staging CloudFront
+                    ] if is_staging else [
+                        "https://app.teammediahub.co",
+                    ],
                     allowed_headers=["*"],
                     exposed_headers=["ETag", "x-amz-version-id", "Content-Type", "Content-Length"],
                     max_age=3600,
