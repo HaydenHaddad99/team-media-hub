@@ -47,12 +47,12 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
     .map(name => {
       const albumItems = items
         .filter(i => (i.album_name || "All uploads") === name)
-        .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+        .sort((a, b) => (a.created_at || 0) - (b.created_at || 0)); // oldest first → stable cover
       return {
         name,
         cover: albumItems.find(i => i.thumb_url)?.thumb_url || null,
         count: albumItems.length,
-        lastUpdated: albumItems[0]?.created_at || 0,
+        lastUpdated: Math.max(...albumItems.map(i => i.created_at || 0)),
       };
     })
     .sort((a, b) => b.lastUpdated - a.lastUpdated);
