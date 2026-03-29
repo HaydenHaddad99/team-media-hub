@@ -4,6 +4,7 @@ import { listMedia, MediaItem, clearStoredToken, getMe, MeResponse, presignDownl
 import { getHomeRoute, navigate } from "../lib/navigation";
 import { UploadButton } from "../components/UploadButton";
 import { MediaGrid } from "../components/MediaGrid";
+import { AlbumGrid, AlbumData } from "../components/AlbumGrid";
 import "../styles/pages.css";
 
 export function Feed({ onLogout }: { onLogout: () => void }) {
@@ -16,6 +17,9 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
   const [err, setErr] = useState<string | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [albumFilter, setAlbumFilter] = useState<string>("all");
+  const [albumView, setAlbumView] = useState<boolean>(true); // true = album browser, false = media grid
+  const [showNewAlbumModal, setShowNewAlbumModal] = useState<boolean>(false);
+  const [newAlbumName, setNewAlbumName] = useState<string>("");
   const [selectMode, setSelectMode] = useState<boolean>(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -36,10 +40,37 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
 
   // Get unique albums from items
   const albums = Array.from(new Set(items.map(i => i.album_name || "All uploads"))).sort();
-  
+
+  // Build album data for the album browser (cover = most recent item's thumb)
+  const albumData: AlbumData[] = albums
+    .filter(name => name !== "All uploads")
+    .map(name => {
+      const albumItems = items
+        .filter(i => (i.album_name || "All uploads") === name)
+        .sort((a, b) => (a.created_at || 0) - (b.created_at || 0)); // oldest first → stable cover
+      return {
+        name,
+        cover: albumItems.find(i => i.thumb_url)?.thumb_url || null,
+        count: albumItems.length,
+        lastUpdated: Math.max(...albumItems.map(i => i.created_at || 0)),
+      };
+    })
+    .sort((a, b) => b.lastUpdated - a.lastUpdated);
+
+  // Also include "All uploads" as the first tile if there are items
+  const allAlbumsData: AlbumData[] = items.length > 0 ? [
+    {
+      name: "All uploads",
+      cover: [...items].sort((a, b) => (b.created_at || 0) - (a.created_at || 0)).find(i => i.thumb_url)?.thumb_url || null,
+      count: items.length,
+      lastUpdated: items.reduce((max, i) => Math.max(max, i.created_at || 0), 0),
+    },
+    ...albumData,
+  ] : albumData;
+
   // Filter items by selected album
-  const filteredItems = albumFilter === "all" 
-    ? items 
+  const filteredItems = albumFilter === "all"
+    ? items
     : items.filter(i => (i.album_name || "All uploads") === albumFilter);
 
   // Get storage limit from team data (or default to 10 GB if not available)
@@ -104,8 +135,9 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
   }
 
   async function handleUploadComplete() {
-    // After upload, switch to "All albums" view so users can see new uploads
+    // After upload, go back to album browser so users see updated album covers
     setAlbumFilter("all");
+    setAlbumView(true);
     await refresh();
   }
 
@@ -154,6 +186,7 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
   // Reset album filter when switching teams
   useEffect(() => {
     setAlbumFilter("all");
+    setAlbumView(true);
     setSelectedIds(new Set());
   }, [urlTeamId]);
 
@@ -415,108 +448,124 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
       {meErr && <div className="error" style={{ maxWidth: 1200, margin: "0 auto 16px" }}>{meErr}</div>}
 
       <div className="feed-v2-content">
-        {/* Featured Album Card */}
-        {featuredAlbum && (
-          <div className="feed-v2-featured-album">
-            <div className="feed-v2-featured-album-header">
-              <div>
-                <h3 className="feed-v2-featured-album-title">{featuredAlbum.name}</h3>
-                <p className="feed-v2-featured-album-meta">
-                  {featuredAlbum.count} {featuredAlbum.count === 1 ? "item" : "items"}
-                  {featuredAlbum.lastUpdated > 0 && <span> · Updated {formatTimeAgo(featuredAlbum.lastUpdated)}</span>}
-                </p>
+        {albumView ? (
+          /* ── Album Browser ── */
+          <div className="feed-v2-grid-section">
+            <div className="feed-v2-toolbar">
+              <div className="feed-v2-toolbar-left">
+                <h2 className="feed-v2-album-title">
+                  Team Albums
+                </h2>
               </div>
-              <button
-                className="feed-v2-btn-view-album"
-                onClick={() => setAlbumFilter(featuredAlbum.name)}
-              >
-                View Album
-              </button>
+              <div className="feed-v2-toolbar-right">
+                <button type="button" className="feed-v2-btn-toolbar" onClick={refresh} disabled={loading}>
+                  {loading ? "Loading..." : "Refresh"}
+                </button>
+                {canUpload && (
+                  <button
+                    type="button"
+                    className="feed-v2-btn-new-album"
+                    onClick={() => { setNewAlbumName(""); setShowNewAlbumModal(true); }}
+                    title="New album"
+                  >
+                    +
+                  </button>
+                )}
+              </div>
             </div>
+
+            {err && <div className="error feed-v2-section-error">{err}</div>}
+
+            {loading && items.length === 0 ? (
+              /* skeleton tiles */
+              <div className="album-grid-static">
+                {[1, 2, 3, 4].map(n => (
+                  <div key={n} className="album-tile album-tile--skeleton" />
+                ))}
+              </div>
+            ) : allAlbumsData.length === 0 ? (
+              <div className="feed-v2-empty">
+                {canUpload
+                  ? "No uploads yet. Start sharing by uploading your first photo or video."
+                  : "No uploads yet. Ask your admin to start sharing photos."}
+              </div>
+            ) : (
+              <AlbumGrid
+                albums={allAlbumsData}
+                onSelect={(name) => {
+                  setAlbumFilter(name === "All uploads" ? "all" : name);
+                  setAlbumView(false);
+                }}
+              />
+            )}
+          </div>
+        ) : (
+          /* ── Media Grid (inside an album) ── */
+          <div className="feed-v2-grid-section">
+            <div className="feed-v2-toolbar">
+              <div className="feed-v2-toolbar-left feed-v2-toolbar-left--album">
+                <button
+                  type="button"
+                  className="feed-v2-album-back"
+                  onClick={() => { setAlbumView(true); setAlbumFilter("all"); setSelectMode(false); }}
+                >
+                  ← Albums
+                </button>
+                <h2 className="feed-v2-album-title">
+                  {albumFilter === "all" ? "All uploads" : albumFilter}
+                </h2>
+              </div>
+              <div className="feed-v2-toolbar-right">
+                <button type="button" className="feed-v2-btn-toolbar" onClick={() => setSelectMode(s => !s)}>
+                  {selectMode ? "Done" : "Select"}
+                </button>
+                <button type="button" className="feed-v2-btn-toolbar" onClick={refresh} disabled={loading}>
+                  {loading ? "Loading..." : "Refresh"}
+                </button>
+                {canUpload && (
+                  <div className="feed-v2-upload-desktop">
+                    <UploadButton onUploaded={handleUploadComplete} defaultAlbum={albumFilter === "all" ? "" : albumFilter} />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {err && <div className="error feed-v2-section-error">{err}</div>}
+
+            {loading && items.length === 0 ? (
+              <MediaGrid items={[]} loading={true} />
+            ) : filteredItems.length === 0 && items.length > 0 ? (
+              <div className="feed-v2-empty">No media in this album.</div>
+            ) : filteredItems.length === 0 ? (
+              <div className="feed-v2-empty">
+                {canUpload
+                  ? "No uploads yet. Start sharing by uploading your first photo or video."
+                  : "No uploads yet. Share the uploader link to start collecting photos from parents."}
+              </div>
+            ) : (
+              <>
+                <MediaGrid
+                  items={filteredItems}
+                  loading={false}
+                  canDelete={canUpload}
+                  onDeleted={refresh}
+                  selectMode={selectMode}
+                  selectedIds={selectedIds}
+                  onToggleSelect={toggleSelect}
+                  currentUserId={currentUserId}
+                  userRole={role}
+                />
+                {nextCursor && albumFilter === "all" && (
+                  <div className="feed-v2-load-more-row">
+                    <button type="button" className="feed-v2-btn-toolbar" onClick={loadMore} disabled={loadingMore}>
+                      {loadingMore ? "Loading..." : "Load more"}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         )}
-
-        {/* Media Grid Section */}
-        <div className="feed-v2-grid-section">
-          {/* Compact Toolbar above grid */}
-          <div className="feed-v2-toolbar">
-            <div className="feed-v2-toolbar-left">
-              {(albums.length > 1 || (canUpload && items.length > 0)) && (
-                <select 
-                  className="feed-v2-select" 
-                  value={albumFilter} 
-                  onChange={(e) => setAlbumFilter(e.target.value)}
-                >
-                  <option value="all">All albums</option>
-                  {albums.map(album => (
-                    <option key={album} value={album}>{album}</option>
-                  ))}
-                </select>
-              )}
-            </div>
-            <div className="feed-v2-toolbar-right">
-              <button
-                className="feed-v2-btn-toolbar"
-                onClick={() => setSelectMode(s => !s)}
-              >
-                {selectMode ? "Done" : "Select"}
-              </button>
-              <button 
-                className="feed-v2-btn-toolbar" 
-                onClick={refresh} 
-                disabled={loading}
-              >
-                {loading ? "Loading..." : "Refresh"}
-              </button>
-              {/* Desktop Upload Button */}
-              {canUpload && (
-                <div className="feed-v2-upload-desktop">
-                  <UploadButton onUploaded={handleUploadComplete} defaultAlbum={albumFilter === "all" ? "" : albumFilter} />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {err && <div className="error" style={{ marginBottom: 16 }}>{err}</div>}
-
-          {/* Media Grid */}
-          {loading && items.length === 0 ? (
-            <MediaGrid items={[]} loading={true} />
-          ) : filteredItems.length === 0 && items.length > 0 ? (
-            <div className="feed-v2-empty">No media in this album.</div>
-          ) : filteredItems.length === 0 ? (
-            <div className="feed-v2-empty">
-              {canUpload
-                ? "No uploads yet. Start sharing by uploading your first photo or video."
-                : "No uploads yet. Share the uploader link to start collecting photos from parents."}
-            </div>
-          ) : (
-            <>
-              <MediaGrid
-                items={filteredItems}
-                loading={false}
-                canDelete={canUpload}
-                onDeleted={refresh}
-                selectMode={selectMode}
-                selectedIds={selectedIds}
-                onToggleSelect={toggleSelect}
-                currentUserId={currentUserId}
-                userRole={role}
-              />
-              {nextCursor && albumFilter === "all" && (
-                <div style={{ display: "flex", justifyContent: "center", marginTop: 20 }}>
-                  <button 
-                    className="feed-v2-btn-toolbar" 
-                    onClick={loadMore} 
-                    disabled={loadingMore}
-                  >
-                    {loadingMore ? "Loading..." : "Load more"}
-                  </button>
-                </div>
-              )}
-            </>
-          )}
-        </div>
 
         {/* Storage Slim Bar (below grid) */}
         {me?.team && (
@@ -625,7 +674,7 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
 
                   {!canManageBilling && usagePercent >= 80 && (
                     <div className="feed-v2-storage-parent-warning">
-                      Storage is getting full — please notify your coach to upgrade.
+                      Storage is getting full — please notify your admin to upgrade.
                     </div>
                   )}
                 </>
@@ -674,6 +723,58 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
       <footer className="feed-v2-footer">
         Team Media Hub: Private, invite-only sharing for youth sports — built for parents, not social networks.
       </footer>
+
+      {/* New Album Modal */}
+      {showNewAlbumModal && (
+        <div
+          className="modal-backdrop"
+          onClick={() => setShowNewAlbumModal(false)}
+        >
+          <div
+            className="modal-sheet"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="modal-sheet-title">New Album</h3>
+            <input
+              className="modal-sheet-input"
+              type="text"
+              placeholder="Album name"
+              value={newAlbumName}
+              onChange={(e) => setNewAlbumName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && newAlbumName.trim()) {
+                  setAlbumFilter(newAlbumName.trim());
+                  setAlbumView(false);
+                  setShowNewAlbumModal(false);
+                }
+                if (e.key === "Escape") setShowNewAlbumModal(false);
+              }}
+              autoFocus
+            />
+            <div className="modal-sheet-actions">
+              <button
+                type="button"
+                className="feed-v2-btn-ghost"
+                onClick={() => setShowNewAlbumModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="feed-v2-btn-view-album"
+                disabled={!newAlbumName.trim()}
+                onClick={() => {
+                  setAlbumFilter(newAlbumName.trim());
+                  setAlbumView(false);
+                  setShowNewAlbumModal(false);
+                }}
+              >
+                Create Album
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Billing Upgrade Modal */}
       {showBillingModal && me?.team && canUpload && (

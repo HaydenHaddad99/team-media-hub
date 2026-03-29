@@ -104,7 +104,7 @@ export function VerifyCoachAccess({ onVerified }: VerifyCoachAccessProps) {
           fontSize: "20px",
         }}
       >
-        Verify Coach Access
+        Verify Admin Access
       </h2>
       <p
         style={{
@@ -114,7 +114,7 @@ export function VerifyCoachAccess({ onVerified }: VerifyCoachAccessProps) {
           lineHeight: "1.6",
         }}
       >
-        To create teams and manage your dashboard, please verify your coach access
+        To create teams and manage your dashboard, please verify your admin access
         by entering the setup key. You only need to do this once.
       </p>
 

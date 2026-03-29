@@ -56,7 +56,7 @@ export function CoachSignIn({ onEmailSubmitted }: CoachSignInProps) {
         margin: "0 auto",
         padding: "40px 20px",
       }}>
-        <h2 style={{ marginTop: 0, color: "#00aeff" }}>Coach Sign In</h2>
+        <h2 style={{ marginTop: 0, color: "#00aeff" }}>Admin Sign In</h2>
         <p style={{ color: "#aaa", marginBottom: "30px" }}>
           Enter your email to access your teams. We'll send you a 6-digit code.
         </p>
@@ -131,7 +131,7 @@ export function CoachSignIn({ onEmailSubmitted }: CoachSignInProps) {
           fontSize: "14px",
           marginTop: "20px",
         }}>
-          Not a coach?{" "}
+          Not an admin?{" "}
           <button
             type="button"
             onClick={() => {

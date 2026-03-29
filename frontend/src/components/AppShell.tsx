@@ -5,7 +5,7 @@ import { ParentSwitchTeamMenu } from "./ParentSwitchTeamMenu";
 
 function getContextTitle(hasCoach: boolean, hasParent: boolean, teamName: string | null) {
   if (hasParent && teamName) return teamName;
-  if (hasCoach) return "Coach Dashboard";
+  if (hasCoach) return "Admin Dashboard";
   return "Team Media Hub";
 }
 
@@ -21,7 +21,7 @@ export function AppShell({
   const hasCoach = !!localStorage.getItem("tmh_user_token");
   const hasParent = !!localStorage.getItem("tmh_invite_token");
   const teamName = localStorage.getItem("team_name");
-  const roleLabel = hasCoach ? "Coach" : (localStorage.getItem("tmh_role") || "Parent");
+  const roleLabel = hasCoach ? "Admin" : (localStorage.getItem("tmh_role") || "Parent");
 
   const contextTitle = getContextTitle(hasCoach, hasParent, teamName);
 
