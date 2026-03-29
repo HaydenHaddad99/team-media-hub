@@ -18,6 +18,8 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [albumFilter, setAlbumFilter] = useState<string>("all");
   const [albumView, setAlbumView] = useState<boolean>(true); // true = album browser, false = media grid
+  const [showNewAlbumModal, setShowNewAlbumModal] = useState<boolean>(false);
+  const [newAlbumName, setNewAlbumName] = useState<string>("");
   const [selectMode, setSelectMode] = useState<boolean>(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -460,9 +462,14 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
                   {loading ? "Loading..." : "Refresh"}
                 </button>
                 {canUpload && (
-                  <div className="feed-v2-upload-desktop">
-                    <UploadButton onUploaded={handleUploadComplete} defaultAlbum="" />
-                  </div>
+                  <button
+                    type="button"
+                    className="feed-v2-btn-new-album"
+                    onClick={() => { setNewAlbumName(""); setShowNewAlbumModal(true); }}
+                    title="New album"
+                  >
+                    +
+                  </button>
                 )}
               </div>
             </div>
@@ -716,6 +723,58 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
       <footer className="feed-v2-footer">
         Team Media Hub: Private, invite-only sharing for youth sports — built for parents, not social networks.
       </footer>
+
+      {/* New Album Modal */}
+      {showNewAlbumModal && (
+        <div
+          className="modal-backdrop"
+          onClick={() => setShowNewAlbumModal(false)}
+        >
+          <div
+            className="modal-sheet"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="modal-sheet-title">New Album</h3>
+            <input
+              className="modal-sheet-input"
+              type="text"
+              placeholder="Album name"
+              value={newAlbumName}
+              onChange={(e) => setNewAlbumName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && newAlbumName.trim()) {
+                  setAlbumFilter(newAlbumName.trim());
+                  setAlbumView(false);
+                  setShowNewAlbumModal(false);
+                }
+                if (e.key === "Escape") setShowNewAlbumModal(false);
+              }}
+              autoFocus
+            />
+            <div className="modal-sheet-actions">
+              <button
+                type="button"
+                className="feed-v2-btn-ghost"
+                onClick={() => setShowNewAlbumModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="feed-v2-btn-view-album"
+                disabled={!newAlbumName.trim()}
+                onClick={() => {
+                  setAlbumFilter(newAlbumName.trim());
+                  setAlbumView(false);
+                  setShowNewAlbumModal(false);
+                }}
+              >
+                Create Album
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Billing Upgrade Modal */}
       {showBillingModal && me?.team && canUpload && (
