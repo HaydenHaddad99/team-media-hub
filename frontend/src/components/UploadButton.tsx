@@ -173,42 +173,22 @@ export function UploadButton({ onUploaded, defaultAlbum }: { onUploaded: () => v
 
   return (
     <div className="uploadRow">
-      {defaultAlbum && defaultAlbum.trim().length > 0 ? (
-        <div className="muted" style={{ minWidth: 200 }}>
-          Uploading to album: <b>{defaultAlbum}</b>
-        </div>
-      ) : (
-        <input
-          type="text"
-          placeholder="Album (optional)"
-          value={album}
-          onChange={(e) => setAlbum(e.target.value)}
-          className="input"
-          disabled={busy}
-          style={{ minWidth: 200, marginRight: 8 }}
-        />
-      )}
       <input
         ref={inputRef}
         type="file"
         multiple
-        // include .heic explicitly because some browsers don't set image/heic reliably
         accept="image/*,.heic,video/mp4,video/quicktime"
         onChange={handlePick}
         hidden
       />
       <button
+        type="button"
         className="btn primary"
         disabled={busy}
         onClick={() => inputRef.current?.click()}
       >
         {busy ? status || "Uploading..." : "Upload"}
       </button>
-      {busy && status?.startsWith("Converting") ? (
-        <div className="muted" style={{ marginTop: 8 }}>
-          Conversion happens locally in your browser.
-        </div>
-      ) : null}
       {err ? <div className="error">{err}</div> : null}
     </div>
   );
