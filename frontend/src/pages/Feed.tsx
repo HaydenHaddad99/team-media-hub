@@ -21,6 +21,7 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
   const [albumView, setAlbumView] = useState<boolean>(true); // true = album browser, false = media grid
   const [showNewAlbumModal, setShowNewAlbumModal] = useState<boolean>(false);
   const [newAlbumName, setNewAlbumName] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<"albums" | "share" | "settings">("albums");
   const [selectMode, setSelectMode] = useState<boolean>(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -436,281 +437,288 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
     }
   }
 
+  // Extract billing badge info for Settings tab
+  const billingBadgeInfo = (() => {
+    if (!me?.team) return null;
+    const plan = me.team.plan || "free";
+    const status = me.team.subscription_status;
+    const cancelAtPeriodEnd = me.team.cancel_at_period_end;
+    const currentPeriodEnd = me.team.current_period_end;
+    const pastDueSince = me.team.past_due_since;
+    let badgeText = "";
+    let badgeColor = "rgba(0, 200, 100, 0.8)";
+    let badgeBackground = "rgba(0, 200, 100, 0.15)";
+    let showWarning = false;
+    let warningText = "";
+    if (plan !== "free" && status === "active" && !cancelAtPeriodEnd) {
+      badgeText = "Active";
+    } else if (plan !== "free" && status === "active" && cancelAtPeriodEnd && currentPeriodEnd) {
+      const endDate = new Date(currentPeriodEnd * 1000).toLocaleDateString();
+      badgeText = `Cancels ${endDate}`;
+      badgeColor = "rgba(255, 140, 0, 0.9)";
+      badgeBackground = "rgba(255, 140, 0, 0.15)";
+      showWarning = true;
+      warningText = `Subscription ends ${endDate}. You'll be downgraded to Free (10GB).`;
+    } else if (status === "past_due") {
+      badgeText = "Past due";
+      badgeColor = "rgba(255, 60, 60, 0.9)";
+      badgeBackground = "rgba(255, 60, 60, 0.15)";
+      showWarning = true;
+      if (pastDueSince) {
+        const daysPastDue = Math.floor((Date.now() / 1000 - pastDueSince) / 86400);
+        const daysLeft = Math.max(0, 7 - daysPastDue);
+        warningText = `Payment failed. Uploads blocked in ${daysLeft} day${daysLeft !== 1 ? "s" : ""}.`;
+      } else {
+        warningText = "Payment failed. Please update your payment method.";
+      }
+    } else if (status === "canceled" || plan === "free") {
+      badgeText = plan === "free" ? "Free" : "Canceled";
+      badgeColor = "rgba(150, 150, 150, 0.8)";
+      badgeBackground = "rgba(150, 150, 150, 0.15)";
+    } else if (status === "trialing") {
+      badgeText = "Trial";
+      badgeColor = "rgba(0, 170, 255, 0.9)";
+      badgeBackground = "rgba(0, 170, 255, 0.15)";
+    }
+    return { badgeText, badgeColor, badgeBackground, showWarning, warningText, plan };
+  })();
+
   return (
     <div className="feed-v2-container">
-      {/* Compact Team Identity Header */}
+      {/* Compact header: team name + exit button */}
       <div className="feed-v2-header">
         <div className="feed-v2-header-identity">
           <h1 className="feed-v2-team-name">{me?.team?.team_name || "Team"}</h1>
           <p className="feed-v2-welcome">Welcome back{role && <span className="feed-v2-role-muted"> · {role}</span>}</p>
         </div>
         <div className="feed-v2-header-actions">
-          <button
-            className="feed-v2-btn-ghost"
-            onClick={handleExitTeam}
-          >
-            {isCoach ? "Switch Team" : "Leave"}
+          <button type="button" className="feed-v2-btn-ghost" onClick={handleExitTeam}>
+            {isCoach ? "Switch" : "Leave"}
           </button>
         </div>
       </div>
 
       {meErr && <div className="error" style={{ maxWidth: 1200, margin: "0 auto 16px" }}>{meErr}</div>}
 
+      {/* Tab Content */}
       <div className="feed-v2-content">
-        {albumView ? (
-          /* ── Album Browser ── */
-          <div className="feed-v2-grid-section">
-            <div className="feed-v2-toolbar">
-              <div className="feed-v2-toolbar-left">
-                <h2 className="feed-v2-album-title">
-                  Team Albums
-                </h2>
+
+        {/* ── Albums Tab ── */}
+        {activeTab === "albums" && (
+          albumView ? (
+            <div className="feed-v2-grid-section">
+              <div className="feed-v2-toolbar">
+                <div className="feed-v2-toolbar-left">
+                  <h2 className="feed-v2-album-title">Team Albums</h2>
+                </div>
+                <div className="feed-v2-toolbar-right">
+                  {canUpload && (
+                    <button
+                      type="button"
+                      className="feed-v2-btn-new-album"
+                      onClick={() => { setNewAlbumName(""); setShowNewAlbumModal(true); }}
+                      title="New album"
+                    >
+                      +
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="feed-v2-toolbar-right">
-                <button type="button" className="feed-v2-btn-toolbar" onClick={refresh} disabled={loading}>
-                  {loading ? "Loading..." : "Refresh"}
-                </button>
-                {canUpload && (
+
+              {err && <div className="error feed-v2-section-error">{err}</div>}
+
+              {loading && items.length === 0 ? (
+                <div className="album-grid-static">
+                  {[1, 2, 3, 4].map(n => (
+                    <div key={n} className="album-tile album-tile--skeleton" />
+                  ))}
+                </div>
+              ) : allAlbumsData.length === 0 ? (
+                <div className="feed-v2-empty">
+                  {canUpload
+                    ? "No uploads yet. Tap the upload button to share your first photo or video."
+                    : "No uploads yet. Ask your admin to start sharing photos."}
+                </div>
+              ) : (
+                <AlbumGrid
+                  albums={allAlbumsData}
+                  onSelect={(name) => {
+                    setAlbumFilter(name === "All uploads" ? "all" : name);
+                    setAlbumView(false);
+                  }}
+                />
+              )}
+            </div>
+          ) : (
+            <div className="feed-v2-grid-section">
+              <div className="feed-v2-toolbar">
+                <div className="feed-v2-toolbar-left feed-v2-toolbar-left--album">
                   <button
                     type="button"
-                    className="feed-v2-btn-new-album"
-                    onClick={() => { setNewAlbumName(""); setShowNewAlbumModal(true); }}
-                    title="New album"
+                    className="feed-v2-album-back"
+                    onClick={() => { setAlbumView(true); setAlbumFilter("all"); setSelectMode(false); }}
                   >
-                    +
+                    ← Albums
+                  </button>
+                  <h2 className="feed-v2-album-title">
+                    {albumFilter === "all" ? "All uploads" : albumFilter}
+                  </h2>
+                </div>
+                <div className="feed-v2-toolbar-right">
+                  <button type="button" className="feed-v2-btn-toolbar" onClick={() => setSelectMode(s => !s)}>
+                    {selectMode ? "Done" : "Select"}
+                  </button>
+                  {canUpload && (
+                    <div className="feed-v2-upload-desktop">
+                      <UploadButton onUploaded={handleUploadComplete} defaultAlbum={albumFilter === "all" ? "" : albumFilter} />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {err && <div className="error feed-v2-section-error">{err}</div>}
+
+              {loading && items.length === 0 ? (
+                <MediaGrid items={[]} loading={true} />
+              ) : filteredItems.length === 0 && items.length > 0 ? (
+                <div className="feed-v2-empty">No media in this album.</div>
+              ) : filteredItems.length === 0 ? (
+                <div className="feed-v2-empty">
+                  {canUpload
+                    ? "No uploads yet. Tap the upload button to start."
+                    : "No uploads yet."}
+                </div>
+              ) : (
+                <>
+                  <MediaGrid
+                    items={filteredItems}
+                    loading={false}
+                    canDelete={canUpload}
+                    onDeleted={handleItemDeleted}
+                    selectMode={selectMode}
+                    selectedIds={selectedIds}
+                    onToggleSelect={toggleSelect}
+                    currentUserId={currentUserId}
+                    userRole={role}
+                  />
+                  {nextCursor && albumFilter === "all" && (
+                    <div className="feed-v2-load-more-row">
+                      <button type="button" className="feed-v2-btn-toolbar" onClick={loadMore} disabled={loadingMore}>
+                        {loadingMore ? "Loading..." : "Load more"}
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )
+        )}
+
+        {/* ── Share Tab ── */}
+        {activeTab === "share" && (
+          <div className="feed-tab-share">
+            <h2 className="feed-tab-heading">Invite Parents</h2>
+            {me?.team?.team_code ? (
+              <>
+                <p className="feed-tab-subtext">Share this code so parents can join your team and view photos.</p>
+                <div className="feed-v2-invite-code">{me.team.team_code}</div>
+                <div className="feed-v2-invite-actions">
+                  <button type="button" className="feed-v2-btn-invite" onClick={handleCopyTeamCode}>
+                    Copy Code
+                  </button>
+                  <button type="button" className="feed-v2-btn-invite" onClick={handleShareTeam}>
+                    Share
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="feed-v2-empty">No team code available.</div>
+            )}
+          </div>
+        )}
+
+        {/* ── Settings Tab ── */}
+        {activeTab === "settings" && (
+          <div className="feed-tab-settings">
+            <h2 className="feed-tab-heading">Settings</h2>
+
+            {/* Storage */}
+            {me?.team && billingBadgeInfo && (
+              <div className="feed-settings-card">
+                <div className="feed-settings-card-header">
+                  <span className="feed-settings-card-label">Storage</span>
+                  {billingBadgeInfo.badgeText && (
+                    <span
+                      className="feed-v2-storage-badge"
+                      style={{
+                        ["--badge-color" as string]: billingBadgeInfo.badgeColor,
+                        ["--badge-bg" as string]: billingBadgeInfo.badgeBackground,
+                        ["--badge-border" as string]: billingBadgeInfo.badgeColor.replace("0.9", "0.3").replace("0.8", "0.3"),
+                      }}
+                    >
+                      {billingBadgeInfo.badgeText}
+                    </span>
+                  )}
+                </div>
+                <div className="feed-settings-usage-text">
+                  {usageText} of {limitText}
+                </div>
+                <div className="feed-v2-storage-progress">
+                  <div
+                    className={`feed-v2-storage-progress-bar${usagePercent > 80 ? " feed-v2-storage-progress-bar--warn" : ""}`}
+                    style={{ ["--bar-width" as string]: `${usagePercent}%` }}
+                  />
+                </div>
+                {billingBadgeInfo.showWarning && (
+                  <div className="feed-v2-storage-warning feed-settings-warning-top">
+                    ⚠️ {billingBadgeInfo.warningText}
+                  </div>
+                )}
+                {!billingBadgeInfo.showWarning && !canManageBilling && usagePercent >= 80 && (
+                  <div className="feed-v2-storage-parent-warning">
+                    Storage is getting full — notify your admin to upgrade.
+                  </div>
+                )}
+                {canManageBilling && (
+                  <button
+                    type="button"
+                    className="feed-v2-btn-manage-billing feed-settings-billing-btn"
+                    onClick={() => {
+                      if ((me.team?.plan || "free") === "free") {
+                        setShowBillingModal(true);
+                      } else {
+                        openBillingPortal();
+                      }
+                    }}
+                    disabled={billingBusy}
+                  >
+                    {billingBusy ? "Loading..." : (me.team?.plan === "free" || !me.team?.plan) ? "Upgrade storage" : "Manage billing"}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Account actions */}
+            <div className="feed-settings-card">
+              <div className="feed-settings-card-label feed-settings-account-label">Account</div>
+              <div className="feed-settings-actions">
+                <button type="button" className="feed-v2-btn-ghost feed-settings-action-btn" onClick={handleExitTeam}>
+                  {isCoach ? "Switch Team" : "Leave Team"}
+                </button>
+                {isCoach && (
+                  <button type="button" className="feed-v2-btn-ghost feed-settings-action-btn" onClick={onLogout}>
+                    Sign Out
                   </button>
                 )}
               </div>
             </div>
-
-            {err && <div className="error feed-v2-section-error">{err}</div>}
-
-            {loading && items.length === 0 ? (
-              /* skeleton tiles */
-              <div className="album-grid-static">
-                {[1, 2, 3, 4].map(n => (
-                  <div key={n} className="album-tile album-tile--skeleton" />
-                ))}
-              </div>
-            ) : allAlbumsData.length === 0 ? (
-              <div className="feed-v2-empty">
-                {canUpload
-                  ? "No uploads yet. Start sharing by uploading your first photo or video."
-                  : "No uploads yet. Ask your admin to start sharing photos."}
-              </div>
-            ) : (
-              <AlbumGrid
-                albums={allAlbumsData}
-                onSelect={(name) => {
-                  setAlbumFilter(name === "All uploads" ? "all" : name);
-                  setAlbumView(false);
-                }}
-              />
-            )}
-          </div>
-        ) : (
-          /* ── Media Grid (inside an album) ── */
-          <div className="feed-v2-grid-section">
-            <div className="feed-v2-toolbar">
-              <div className="feed-v2-toolbar-left feed-v2-toolbar-left--album">
-                <button
-                  type="button"
-                  className="feed-v2-album-back"
-                  onClick={() => { setAlbumView(true); setAlbumFilter("all"); setSelectMode(false); }}
-                >
-                  ← Albums
-                </button>
-                <h2 className="feed-v2-album-title">
-                  {albumFilter === "all" ? "All uploads" : albumFilter}
-                </h2>
-              </div>
-              <div className="feed-v2-toolbar-right">
-                <button type="button" className="feed-v2-btn-toolbar" onClick={() => setSelectMode(s => !s)}>
-                  {selectMode ? "Done" : "Select"}
-                </button>
-                <button type="button" className="feed-v2-btn-toolbar" onClick={refresh} disabled={loading}>
-                  {loading ? "Loading..." : "Refresh"}
-                </button>
-                {canUpload && (
-                  <div className="feed-v2-upload-desktop">
-                    <UploadButton onUploaded={handleUploadComplete} defaultAlbum={albumFilter === "all" ? "" : albumFilter} />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {err && <div className="error feed-v2-section-error">{err}</div>}
-
-            {loading && items.length === 0 ? (
-              <MediaGrid items={[]} loading={true} />
-            ) : filteredItems.length === 0 && items.length > 0 ? (
-              <div className="feed-v2-empty">No media in this album.</div>
-            ) : filteredItems.length === 0 ? (
-              <div className="feed-v2-empty">
-                {canUpload
-                  ? "No uploads yet. Start sharing by uploading your first photo or video."
-                  : "No uploads yet. Share the uploader link to start collecting photos from parents."}
-              </div>
-            ) : (
-              <>
-                <MediaGrid
-                  items={filteredItems}
-                  loading={false}
-                  canDelete={canUpload}
-                  onDeleted={handleItemDeleted}
-                  selectMode={selectMode}
-                  selectedIds={selectedIds}
-                  onToggleSelect={toggleSelect}
-                  currentUserId={currentUserId}
-                  userRole={role}
-                />
-                {nextCursor && albumFilter === "all" && (
-                  <div className="feed-v2-load-more-row">
-                    <button type="button" className="feed-v2-btn-toolbar" onClick={loadMore} disabled={loadingMore}>
-                      {loadingMore ? "Loading..." : "Load more"}
-                    </button>
-                  </div>
-                )}
-              </>
-            )}
           </div>
         )}
 
-        {/* Storage Slim Bar (below grid) */}
-        {me?.team && (
-          <div className="feed-v2-storage-bar">
-            {(() => {
-              const plan = me.team.plan || "free";
-              const status = me.team.subscription_status;
-              const cancelAtPeriodEnd = me.team.cancel_at_period_end;
-              const currentPeriodEnd = me.team.current_period_end;
-              const pastDueSince = me.team.past_due_since;
-              
-              let badgeText = "";
-              let badgeColor = "rgba(0, 200, 100, 0.8)";
-              let badgeBackground = "rgba(0, 200, 100, 0.15)";
-              let showWarning = false;
-              let warningText = "";
-              
-              if (plan !== "free" && status === "active" && !cancelAtPeriodEnd) {
-                badgeText = "Active";
-              } else if (plan !== "free" && status === "active" && cancelAtPeriodEnd && currentPeriodEnd) {
-                const endDate = new Date(currentPeriodEnd * 1000).toLocaleDateString();
-                badgeText = `Cancels on ${endDate}`;
-                badgeColor = "rgba(255, 140, 0, 0.9)";
-                badgeBackground = "rgba(255, 140, 0, 0.15)";
-                showWarning = true;
-                warningText = `Your subscription will end on ${endDate}. You'll be downgraded to Free (10GB).`;
-              } else if (status === "past_due") {
-                badgeText = "Past due";
-                badgeColor = "rgba(255, 60, 60, 0.9)";
-                badgeBackground = "rgba(255, 60, 60, 0.15)";
-                showWarning = true;
-                if (pastDueSince) {
-                  const daysPastDue = Math.floor((Date.now() / 1000 - pastDueSince) / 86400);
-                  const daysLeft = Math.max(0, 7 - daysPastDue);
-                  warningText = `Payment failed. Uploads will be blocked in ${daysLeft} day${daysLeft !== 1 ? 's' : ''} if not resolved.`;
-                } else {
-                  warningText = "Payment failed. Please update your payment method.";
-                }
-              } else if (status === "canceled" || plan === "free") {
-                badgeText = plan === "free" ? "Free Plan" : "Canceled";
-                badgeColor = "rgba(150, 150, 150, 0.8)";
-                badgeBackground = "rgba(150, 150, 150, 0.15)";
-              } else if (status === "trialing") {
-                badgeText = "Trial";
-                badgeColor = "rgba(0, 170, 255, 0.9)";
-                badgeBackground = "rgba(0, 170, 255, 0.15)";
-              }
-              
-              return (
-                <>
-                  {showWarning && warningText && (
-                    <div className="feed-v2-storage-warning">
-                      ⚠️ {warningText}
-                    </div>
-                  )}
-                  
-                  <div className="feed-v2-storage-header">
-                    <div className="feed-v2-storage-plan">
-                      {badgeText && (
-                        <span
-                          className="feed-v2-storage-badge"
-                          style={{
-                            color: badgeColor,
-                            background: badgeBackground,
-                            borderColor: badgeColor.replace('0.9', '0.3').replace('0.8', '0.3'),
-                          }}
-                        >
-                          {badgeText}
-                        </span>
-                      )}
-                      <span className="feed-v2-storage-plan-text">
-                        {(me.team.plan === "free" || !me.team.plan) ? "Free" : (me.team.plan || "Free").charAt(0).toUpperCase() + (me.team.plan || "").slice(1)}
-                      </span>
-                    </div>
-                    <div className="feed-v2-storage-usage-text">
-                      {usageText} of {limitText}
-                    </div>
-                  </div>
-                  
-                  <div className="feed-v2-storage-progress">
-                    <div 
-                      className="feed-v2-storage-progress-bar"
-                      style={{ 
-                        width: `${usagePercent}%`, 
-                        background: usagePercent > 80 ? "rgba(255, 140, 0, 0.7)" : "rgba(0, 170, 255, 0.6)",
-                      }} 
-                    />
-                  </div>
-
-                  {canManageBilling && (
-                    <button
-                      className="feed-v2-btn-manage-billing"
-                      onClick={() => {
-                        const plan = me?.team?.plan || "free";
-                        if (plan === "free") {
-                          setShowBillingModal(true);
-                        } else {
-                          openBillingPortal();
-                        }
-                      }}
-                      disabled={billingBusy}
-                    >
-                      {billingBusy ? "Loading..." : (me.team.plan === "free" || !me.team.plan) ? "Upgrade" : "Manage billing"}
-                    </button>
-                  )}
-
-                  {!canManageBilling && usagePercent >= 80 && (
-                    <div className="feed-v2-storage-parent-warning">
-                      Storage is getting full — please notify your admin to upgrade.
-                    </div>
-                  )}
-                </>
-              );
-            })()}
-          </div>
-        )}
-
-        {/* Invite Share Card */}
-        {me?.team?.team_code && (
-          <div className="feed-v2-invite-card">
-            <h3 className="feed-v2-invite-title">Invite other parents</h3>
-            <div className="feed-v2-invite-code">{me.team.team_code}</div>
-            <div className="feed-v2-invite-actions">
-              <button className="feed-v2-btn-invite" onClick={handleCopyTeamCode}>
-                Copy Code
-              </button>
-              <button className="feed-v2-btn-invite" onClick={handleShareTeam}>
-                Share
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Mobile Upload FAB */}
-      {canUpload && (
+      {/* Upload FAB — only on Albums tab */}
+      {canUpload && activeTab === "albums" && (
         <div className="feed-v2-fab">
           <UploadButton onUploaded={handleUploadComplete} defaultAlbum={albumFilter === "all" ? "" : albumFilter} />
         </div>
@@ -721,17 +729,54 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
         <div className="feed-v2-selection-bar">
           <div className="feed-v2-selection-content">
             <div className="feed-v2-selection-count">Selected: {selectedIds.size}</div>
-            <button className="feed-v2-btn-selection" onClick={downloadSelected}>Download selected</button>
+            <button type="button" className="feed-v2-btn-selection" onClick={downloadSelected}>Download</button>
             {canUpload && (
-              <button className="feed-v2-btn-selection-danger" onClick={deleteSelected}>Delete selected</button>
+              <button type="button" className="feed-v2-btn-selection-danger" onClick={deleteSelected}>Delete</button>
             )}
           </div>
         </div>
       )}
 
-      <footer className="feed-v2-footer">
-        Team Media Hub: Private, invite-only sharing for youth sports — built for parents, not social networks.
-      </footer>
+      {/* Bottom Tab Bar */}
+      <nav className="feed-tab-bar">
+        <button
+          type="button"
+          className={`feed-tab-item${activeTab === "albums" ? " feed-tab-item--active" : ""}`}
+          onClick={() => setActiveTab("albums")}
+        >
+          <svg className="feed-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="7" height="7" rx="1" />
+            <rect x="14" y="3" width="7" height="7" rx="1" />
+            <rect x="3" y="14" width="7" height="7" rx="1" />
+            <rect x="14" y="14" width="7" height="7" rx="1" />
+          </svg>
+          <span className="feed-tab-label">Albums</span>
+        </button>
+        <button
+          type="button"
+          className={`feed-tab-item${activeTab === "share" ? " feed-tab-item--active" : ""}`}
+          onClick={() => setActiveTab("share")}
+        >
+          <svg className="feed-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <line x1="19" y1="8" x2="19" y2="14" />
+            <line x1="22" y1="11" x2="16" y2="11" />
+          </svg>
+          <span className="feed-tab-label">Invite</span>
+        </button>
+        <button
+          type="button"
+          className={`feed-tab-item${activeTab === "settings" ? " feed-tab-item--active" : ""}`}
+          onClick={() => setActiveTab("settings")}
+        >
+          <svg className="feed-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+          <span className="feed-tab-label">Settings</span>
+        </button>
+      </nav>
 
       {/* New Album Modal */}
       {showNewAlbumModal && (
