@@ -28,7 +28,7 @@ ddb = boto3.client("dynamodb")
 # media/{team_id}/{media_id}/{filename}
 KEY_RE = re.compile(r"^media/([^/]+)/([^/]+)/(.+)$")
 
-MAX_SIZE = 512
+MAX_SIZE = 300
 JPEG_QUALITY = 78
 
 PREVIEW_MAX = 1600
