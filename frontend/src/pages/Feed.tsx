@@ -135,6 +135,10 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
     }
   }
 
+  function handleItemDeleted(mediaId: string) {
+    setItems(prev => prev.filter(i => i.media_id !== mediaId));
+  }
+
   async function handleUploadComplete() {
     // After upload, go back to album browser so users see updated album covers
     setAlbumFilter("all");
@@ -270,14 +274,17 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
     try {
       setErr(null);
       const ids = Array.from(selectedIds);
-      // delete sequentially to reduce load
+      // Optimistic: remove from state immediately so the grid updates instantly
+      setItems(prev => prev.filter(i => !ids.includes(i.media_id)));
+      setSelectedIds(new Set());
+      // Delete sequentially in the background
       for (const id of ids) {
         await deleteMedia(id);
       }
-      setSelectedIds(new Set());
-      await refresh();
     } catch (ex: any) {
       setErr(ex?.message || "Failed to delete selection");
+      // Re-fetch to recover correct state on error
+      refresh();
     }
   }
 
@@ -550,7 +557,7 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
                   items={filteredItems}
                   loading={false}
                   canDelete={canUpload}
-                  onDeleted={refresh}
+                  onDeleted={handleItemDeleted}
                   selectMode={selectMode}
                   selectedIds={selectedIds}
                   onToggleSelect={toggleSelect}
