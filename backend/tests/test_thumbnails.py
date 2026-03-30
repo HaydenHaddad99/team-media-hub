@@ -8,7 +8,7 @@ os.environ.setdefault("MEDIA_BUCKET", "test-media-bucket")
 os.environ.setdefault("MEDIA_GSI_NAME", "gsi1")
 
 from PIL import Image
-from thumbs.thumbnail_handler import _make_thumb, _parse_key, _is_image, KEY_RE, MAX_SIZE
+from thumbs.thumbnail_handler import _make_thumb, _parse_key, _is_image, _is_video, KEY_RE, MAX_SIZE
 
 
 def _make_test_image(width=800, height=600, mode="RGB") -> bytes:
@@ -99,3 +99,63 @@ class TestMakeThumb:
         im = Image.open(io.BytesIO(thumb_bytes))
         assert im.width == im.height
         assert im.width <= MAX_SIZE
+
+
+class TestIsVideo:
+    def test_mp4(self):
+        assert _is_video("video/mp4") is True
+
+    def test_quicktime(self):
+        assert _is_video("video/quicktime") is True
+
+    def test_webm(self):
+        assert _is_video("video/webm") is True
+
+    def test_image(self):
+        assert _is_video("image/jpeg") is False
+
+    def test_empty(self):
+        assert _is_video("") is False
+
+
+class TestMakeVideoThumb:
+    """Tests for _make_video_thumb using a mocked subprocess.run."""
+
+    def test_calls_ffmpeg_and_returns_jpeg(self, tmp_path, monkeypatch):
+        """_make_video_thumb should call ffmpeg and return the output JPEG bytes."""
+        import subprocess
+        from thumbs import thumbnail_handler
+
+        # Create a fake JPEG to act as the ffmpeg output
+        fake_jpeg = Image.new("RGB", (300, 200), color=(0, 128, 0))
+        fake_jpeg_buf = io.BytesIO()
+        fake_jpeg.save(fake_jpeg_buf, format="JPEG")
+        fake_jpeg_bytes = fake_jpeg_buf.getvalue()
+
+        def fake_run(cmd, **kwargs):
+            # Write a valid JPEG to the output path (last positional arg)
+            out_path = cmd[-1]
+            with open(out_path, "wb") as f:
+                f.write(fake_jpeg_bytes)
+
+        monkeypatch.setattr(subprocess, "run", fake_run)
+
+        result = thumbnail_handler._make_video_thumb(b"fake-video-bytes")
+
+        im = Image.open(io.BytesIO(result))
+        assert im.format == "JPEG"
+        assert im.size == (300, 200)
+
+    def test_raises_on_ffmpeg_failure(self, monkeypatch):
+        """_make_video_thumb should propagate ffmpeg errors."""
+        import subprocess
+        from thumbs import thumbnail_handler
+
+        def fake_run(cmd, **kwargs):
+            raise subprocess.CalledProcessError(1, cmd)
+
+        monkeypatch.setattr(subprocess, "run", fake_run)
+
+        import pytest
+        with pytest.raises(subprocess.CalledProcessError):
+            thumbnail_handler._make_video_thumb(b"bad-video")

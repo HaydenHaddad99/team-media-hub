@@ -72,7 +72,16 @@ jobs:
           python -m pip install -q cryptography -t layers/cryptography/python
           test -d layers/cryptography/python/cryptography
           PYTHONPATH=layers/cryptography/python python -c "import cryptography; print(cryptography.__version__)"
-      
+
+      - name: Build ffmpeg Lambda layer
+        run: |
+          rm -rf layers/ffmpeg
+          mkdir -p layers/ffmpeg/bin
+          curl -sSL "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz" \
+            | tar -xJ --strip-components=1 --wildcards -C layers/ffmpeg/bin '*/ffmpeg'
+          chmod +x layers/ffmpeg/bin/ffmpeg
+          test -f layers/ffmpeg/bin/ffmpeg
+
       - name: Deploy with CDK
         env:
           DEPLOY_STAGE: prod

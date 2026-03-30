@@ -42,19 +42,38 @@ def handle_media_list(event):
         else:
             it["thumb_url"] = None
 
-        # Preview URL via CloudFront signed URL for images
-        preview_key = it.get("preview_key") or it.get("object_key")
-        if preview_key and content_type.startswith("image/"):
-            try:
-                it["preview_url"] = create_signed_url(
-                    domain_name=CLOUDFRONT_DOMAIN,
-                    object_key=preview_key,
-                    key_pair_id=CLOUDFRONT_KEY_PAIR_ID,
-                    private_key_pem=CLOUDFRONT_PRIVATE_KEY,
-                    expires_in_seconds=3600,
-                )
-            except Exception as e:
-                print(f"Failed to create CloudFront signed URL for preview: {e}")
+        # Preview URL: CloudFront signed URL for images; direct signed URL for videos
+        if content_type.startswith("image/"):
+            preview_key = it.get("preview_key") or it.get("object_key")
+            if preview_key:
+                try:
+                    it["preview_url"] = create_signed_url(
+                        domain_name=CLOUDFRONT_DOMAIN,
+                        object_key=preview_key,
+                        key_pair_id=CLOUDFRONT_KEY_PAIR_ID,
+                        private_key_pem=CLOUDFRONT_PRIVATE_KEY,
+                        expires_in_seconds=3600,
+                    )
+                except Exception as e:
+                    print(f"Failed to create CloudFront signed URL for preview: {e}")
+                    it["preview_url"] = None
+            else:
+                it["preview_url"] = None
+        elif content_type.startswith("video/"):
+            video_key = it.get("object_key")
+            if video_key:
+                try:
+                    it["preview_url"] = create_signed_url(
+                        domain_name=CLOUDFRONT_DOMAIN,
+                        object_key=video_key,
+                        key_pair_id=CLOUDFRONT_KEY_PAIR_ID,
+                        private_key_pem=CLOUDFRONT_PRIVATE_KEY,
+                        expires_in_seconds=3600,
+                    )
+                except Exception as e:
+                    print(f"Failed to create CloudFront signed URL for video: {e}")
+                    it["preview_url"] = None
+            else:
                 it["preview_url"] = None
         else:
             it["preview_url"] = None
