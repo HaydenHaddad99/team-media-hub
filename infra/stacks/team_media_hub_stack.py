@@ -415,20 +415,28 @@ class TeamMediaHubStack(Stack):
             description="Pillow for image thumbnail generation",
         )
 
+        ffmpeg_layer = _lambda.LayerVersion(
+            self,
+            "FfmpegLayer",
+            code=_lambda.Code.from_asset("../layers/ffmpeg"),
+            compatible_runtimes=[_lambda.Runtime.PYTHON_3_12],
+            description="Static ffmpeg binary for video frame extraction",
+        )
+
         thumb_fn = _lambda.Function(
             self,
             "ThumbnailFunction",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="thumbs.thumbnail_handler.handler",
             code=_lambda.Code.from_asset("../backend/src"),
-            timeout=Duration.seconds(30),
-            memory_size=1024,
+            timeout=Duration.seconds(120),  # videos need more time than images
+            memory_size=1536,               # more memory = faster ffmpeg decode
             environment={
                 "MEDIA_BUCKET": media_bucket.bucket_name,
                 "TABLE_MEDIA": media_table.table_name,
                 "MEDIA_GSI_NAME": "gsi1",
             },
-            layers=[pillow_layer],
+            layers=[pillow_layer, ffmpeg_layer],
         )
 
         media_bucket.grant_read(thumb_fn, "media/*")
