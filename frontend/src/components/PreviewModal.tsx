@@ -232,14 +232,15 @@ export function PreviewModal({
         }}
       >
         <div className="modalHeader">
-          <div style={{ display: "flex", gap: 8 }}>
-            {items.length > 1 && (
-              <div className="muted" style={{ fontSize: 13 }}>
-                {selectedIndex + 1} / {items.length}
-              </div>
-            )}
-            <button className="btn" onClick={onClose}>Close</button>
-          </div>
+          {items.length > 1 && (
+            <div className="modalCounter">{selectedIndex + 1} / {items.length}</div>
+          )}
+          <button type="button" className="modalCloseBtn" onClick={onClose} aria-label="Close">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
         </div>
 
         <div className="modalBody" style={{ position: "relative", minHeight: 400, background: "linear-gradient(135deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.6) 100%)" }}>
@@ -317,49 +318,59 @@ export function PreviewModal({
             </div>
           </div>
 
-          {hasPrev && (
-            <button
-              className="carouselBtn carouselBtnPrev"
-              onClick={(e) => { e.stopPropagation(); emblaApi?.scrollPrev(); }}
-              aria-label="Previous"
-            >
-              ‹
-            </button>
-          )}
-
-          {hasNext && (
-            <button
-              className="carouselBtn carouselBtnNext"
-              onClick={(e) => { e.stopPropagation(); emblaApi?.scrollNext(); }}
-              aria-label="Next"
-            >
-              ›
-            </button>
-          )}
+          {/* Arrow buttons removed — swipe left/right to navigate, keyboard arrows also work */}
         </div>
 
         <div className="modalFooter">
-          <div className="row" style={{ gap: 10 }}>
-            {canDeleteItem && onDelete ? (
-              <button className="btn btn-danger" onClick={onDelete} disabled={!!deleting || isCurrentLoading}>
-                {deleting ? "Deleting…" : "Delete"}
-              </button>
-            ) : canDelete && !canDeleteItem ? (
-              <button className="btn btn-danger" disabled title="You can only delete your own uploads">
-                Delete
-              </button>
-            ) : null}
-            <button 
-              className="btn btn-primary" 
+          <div className="modalActions">
+            <button
+              type="button"
+              className="modalActionBtn modalActionBtn--download"
               onClick={handleDownload}
               disabled={!mediaUrls[currentItem.media_id] || downloadingId === currentItem.media_id || loadingIds.has(currentItem.media_id)}
+              aria-label={loadingIds.has(currentItem.media_id) ? "Loading…" : "Download"}
+              title="Download"
             >
-              {loadingIds.has(currentItem.media_id)
-                ? "Loading…"
-                : downloadingId === currentItem.media_id
-                  ? "Downloading…"
-                  : "Download"}
+              {/* Download arrow — pointing down into a tray */}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M12 3v13M7 11l5 5 5-5" />
+                <path d="M5 20h14" />
+              </svg>
             </button>
+
+            {canDeleteItem && onDelete ? (
+              <button
+                type="button"
+                className="modalActionBtn modalActionBtn--delete"
+                onClick={onDelete}
+                disabled={!!deleting || isCurrentLoading}
+                aria-label={deleting ? "Deleting…" : "Delete"}
+                title="Delete"
+              >
+                {/* Trash bin */}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6l-1 14H6L5 6" />
+                  <path d="M10 11v6M14 11v6" />
+                  <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                </svg>
+              </button>
+            ) : canDelete && !canDeleteItem ? (
+              <button
+                type="button"
+                className="modalActionBtn modalActionBtn--delete"
+                disabled
+                title="You can only delete your own uploads"
+                aria-label="Delete (not permitted)"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6l-1 14H6L5 6" />
+                  <path d="M10 11v6M14 11v6" />
+                  <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                </svg>
+              </button>
+            ) : null}
           </div>
         </div>
       </div>

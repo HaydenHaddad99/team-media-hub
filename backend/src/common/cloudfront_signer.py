@@ -6,10 +6,24 @@ Generates signed CloudFront URLs using a private key for restricted access to me
 import json
 import base64
 import time
-from datetime import datetime, timedelta
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.backends import default_backend
+
+# Module-level cache: PEM string → parsed private key object.
+# Survives across warm Lambda invocations so we pay the PEM parse cost once
+# per container lifetime instead of once per item per request.
+_key_cache: dict = {}
+
+
+def _load_private_key(pem: str):
+    if pem not in _key_cache:
+        _key_cache[pem] = serialization.load_pem_private_key(
+            pem.encode("utf-8"),
+            password=None,
+            backend=default_backend(),
+        )
+    return _key_cache[pem]
 
 
 def create_signed_url(
@@ -41,8 +55,13 @@ def create_signed_url(
     # Build the full URL
     url = f"{domain_name}/{object_key}"
 
-    # Create expiration timestamp (seconds since epoch)
-    expire_time = int(time.time()) + expires_in_seconds
+    # Round expiry UP to the next whole hour boundary.
+    # All calls within the same clock-hour produce the same Expires value →
+    # identical URL → browser disk cache hits on reload instead of re-downloading.
+    now = int(time.time())
+    raw_expiry = now + expires_in_seconds
+    hour_secs = 3600
+    expire_time = ((raw_expiry + hour_secs - 1) // hour_secs) * hour_secs
 
     # Build the policy document
     policy_dict = {
@@ -61,12 +80,8 @@ def create_signed_url(
     policy_json = json.dumps(policy_dict, separators=(",", ":"))
     policy_b64 = base64.b64encode(policy_json.encode("utf-8")).decode("utf-8")
 
-    # Load the private key
-    private_key = serialization.load_pem_private_key(
-        private_key_pem.encode("utf-8"),
-        password=None,
-        backend=default_backend(),
-    )
+    # Load (or retrieve cached) private key
+    private_key = _load_private_key(private_key_pem)
 
     # Sign the policy
     signature = private_key.sign(

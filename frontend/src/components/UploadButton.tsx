@@ -98,17 +98,16 @@ export function UploadButton({ onUploaded, defaultAlbum }: { onUploaded: () => v
 
     try {
       setBusy(true);
-      let anyUploaded = false;
+      const total = files.length;
+      let done = 0;
+      setStatus(total === 1 ? "Uploading…" : `Uploading 0 of ${total}…`);
 
-      // Upload files sequentially
-      for (let i = 0; i < files.length; i++) {
-        const picked = files[i];
-        setStatus(`Processing ${i + 1} of ${files.length}…`);
+      const albumName = (album.trim() || (defaultAlbum || "").trim()) || undefined;
 
-        // Convert HEIC -> JPEG for compatibility + thumbnail generation
+      async function processOne(picked: File): Promise<void> {
+        // Convert HEIC -> JPEG before uploading
         let file = picked;
         if (isHeic(picked)) {
-          setStatus(`Converting ${i + 1} of ${files.length} (HEIC to JPEG)…`);
           try {
             file = await convertHeicToJpeg(picked);
           } catch (convErr: any) {
@@ -117,7 +116,6 @@ export function UploadButton({ onUploaded, defaultAlbum }: { onUploaded: () => v
           }
         }
 
-        setStatus(`Uploading ${i + 1} of ${files.length}…`);
         const presign = await presignUpload({
           filename: file.name,
           content_type: file.type,
@@ -130,23 +128,27 @@ export function UploadButton({ onUploaded, defaultAlbum }: { onUploaded: () => v
           presign.required_headers["content-type"]
         );
 
-        setStatus(`Finalizing ${i + 1} of ${files.length}…`);
         await completeUpload({
           media_id: presign.media_id,
           object_key: presign.object_key,
           filename: file.name,
           content_type: file.type,
           size_bytes: file.size,
-          album_name: (album.trim() || (defaultAlbum || "").trim()) || undefined,
+          album_name: albumName,
         });
 
-        anyUploaded = true;
+        done += 1;
+        if (total > 1) setStatus(`Uploading ${done} of ${total}…`);
+      }
+
+      // Run up to 3 uploads concurrently
+      const CONCURRENCY = 3;
+      for (let i = 0; i < files.length; i += CONCURRENCY) {
+        await Promise.all(files.slice(i, i + CONCURRENCY).map(processOne));
       }
 
       setStatus(null);
-      if (anyUploaded) {
-        onUploaded();
-      }
+      onUploaded();
     } catch (ex: any) {
       console.error("Upload error:", ex);
       

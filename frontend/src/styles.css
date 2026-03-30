@@ -560,18 +560,98 @@ html, body {
   flex-direction: column;
 }
 
-.modalHeader, .modalFooter {
-  padding: 12px 12px;
+.modalHeader {
+  padding: 10px 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  border-bottom: 1px solid rgba(255,255,255,0.10);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  min-height: 48px;
+}
+
+.modalCounter {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.modalCloseBtn {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: background 0.15s ease;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.modalCloseBtn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.modalCloseBtn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
 }
 
 .modalFooter {
-  border-bottom: none;
-  border-top: 1px solid rgba(255,255,255,0.10);
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.modalActions {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+}
+
+.modalActionBtn {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.modalActionBtn svg {
+  width: 22px;
+  height: 22px;
+}
+
+.modalActionBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.modalActionBtn--download {
+  background: rgba(0, 170, 255, 0.12);
+  color: #00aeff;
+}
+
+.modalActionBtn--download:hover:not(:disabled) {
+  background: rgba(0, 170, 255, 0.25);
+}
+
+.modalActionBtn--delete {
+  background: rgba(255, 80, 80, 0.1);
+  color: rgba(255, 100, 100, 0.9);
+}
+
+.modalActionBtn--delete:hover:not(:disabled) {
+  background: rgba(255, 80, 80, 0.22);
+  color: rgba(255, 120, 120, 1);
 }
 
 .modalTitle {

@@ -18,7 +18,7 @@ export function MediaGrid({
   items: MediaItem[];
   loading?: boolean;
   canDelete?: boolean;
-  onDeleted?: () => void;
+  onDeleted?: (mediaId: string) => void;
   selectMode?: boolean;
   selectedIds?: Set<string>;
   onToggleSelect?: (item: MediaItem) => void;
@@ -79,7 +79,7 @@ export function MediaGrid({
       setDeleting(true);
       await deleteMedia(currentItem.media_id);
       setPreview({ open: false, currentIndex: -1 });
-      onDeleted?.();
+      onDeleted?.(currentItem.media_id);
     } catch (ex: any) {
       setErr(ex?.message || "Delete failed");
     } finally {

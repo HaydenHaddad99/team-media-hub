@@ -5,6 +5,7 @@ import { getHomeRoute, navigate } from "../lib/navigation";
 import { UploadButton } from "../components/UploadButton";
 import { MediaGrid } from "../components/MediaGrid";
 import { AlbumGrid, AlbumData } from "../components/AlbumGrid";
+import { applyThumbUrlCache, clearThumbUrlCache } from "../lib/thumbUrlCache";
 import "../styles/pages.css";
 
 export function Feed({ onLogout }: { onLogout: () => void }) {
@@ -97,7 +98,7 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
 
       // First page — small batch so skeleton disappears fast
       const first = await listMedia({ limit: 12 });
-      const firstItems = first.items || [];
+      const firstItems = applyThumbUrlCache(first.items || []);
       setItems(firstItems);
       setLoading(false);
 
@@ -107,7 +108,7 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
         const next = await listMedia({ limit: 30, cursor });
         const nextItems = next.items || [];
         if (nextItems.length === 0) break;
-        setItems(prev => [...prev, ...nextItems]);
+        setItems(prev => [...prev, ...applyThumbUrlCache(nextItems)]);
         cursor = next.next_cursor;
       }
       setNextCursor(null); // all pages loaded automatically
@@ -125,13 +126,17 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
       setErr(null);
       setLoadingMore(true);
       const res = await listMedia({ limit: 30, cursor: nextCursor });
-      setItems(prev => [...prev, ...(res.items || [])]);
+      setItems(prev => [...prev, ...applyThumbUrlCache(res.items || [])]);
       setNextCursor(res.next_cursor || null);
     } catch (ex: any) {
       setErr(ex?.message || "Failed to load more media");
     } finally {
       setLoadingMore(false);
     }
+  }
+
+  function handleItemDeleted(mediaId: string) {
+    setItems(prev => prev.filter(i => i.media_id !== mediaId));
   }
 
   async function handleUploadComplete() {
@@ -145,7 +150,7 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
   async function pollRefresh() {
     try {
       const res = await listMedia({ limit: 30 });
-      setItems(res.items || []);
+      setItems(applyThumbUrlCache(res.items || []));
       setNextCursor(res.next_cursor || null);
     } catch (ex: any) {
       // ignore transient errors during polling
@@ -183,11 +188,12 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
     getUploaderIdentifier().then(setCurrentUserId);
   }, [urlTeamId]);
 
-  // Reset album filter when switching teams
+  // Reset album filter and URL cache when switching teams
   useEffect(() => {
     setAlbumFilter("all");
     setAlbumView(true);
     setSelectedIds(new Set());
+    clearThumbUrlCache();
   }, [urlTeamId]);
 
   // If selection mode turns off or items change drastically, ensure selections stay valid
@@ -268,14 +274,17 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
     try {
       setErr(null);
       const ids = Array.from(selectedIds);
-      // delete sequentially to reduce load
+      // Optimistic: remove from state immediately so the grid updates instantly
+      setItems(prev => prev.filter(i => !ids.includes(i.media_id)));
+      setSelectedIds(new Set());
+      // Delete sequentially in the background
       for (const id of ids) {
         await deleteMedia(id);
       }
-      setSelectedIds(new Set());
-      await refresh();
     } catch (ex: any) {
       setErr(ex?.message || "Failed to delete selection");
+      // Re-fetch to recover correct state on error
+      refresh();
     }
   }
 
@@ -548,7 +557,7 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
                   items={filteredItems}
                   loading={false}
                   canDelete={canUpload}
-                  onDeleted={refresh}
+                  onDeleted={handleItemDeleted}
                   selectMode={selectMode}
                   selectedIds={selectedIds}
                   onToggleSelect={toggleSelect}
