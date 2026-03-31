@@ -1102,6 +1102,24 @@
   letter-spacing: 0.3px;
 }
 
+.feed-tab-icon-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.feed-tab-badge-dot {
+  position: absolute;
+  top: -2px;
+  right: -4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff4d4d;
+  border: 1.5px solid #0f0f1e;
+}
+
 /* ========================================
    Tab Content: Share & Settings
    ======================================== */
