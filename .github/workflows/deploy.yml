@@ -8,6 +8,11 @@ permissions:
   id-token: write
   contents: read
 
+# Prevent concurrent deploys — queue instead of fail when stack is already updating
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
