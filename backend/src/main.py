@@ -26,6 +26,7 @@ from handlers.billing_checkout_session import handle_billing_checkout_session
 from handlers.billing_upgrade import handle_billing_upgrade
 from handlers.billing_webhook import handle_billing_webhook
 from handlers.billing_portal import handle_billing_portal
+from handlers.push_subscribe import handle_push_subscribe, handle_push_unsubscribe
 
 def _route(event: Dict) -> Tuple[str, str]:
     rc = (event.get("requestContext") or {})
@@ -159,6 +160,14 @@ def handler(event: Dict, context: Any) -> Dict:
 
         if method == "POST" and path == "/admin/repair-storage":
             return handle_admin_repair_storage(event)
+
+        if method == "POST" and path == "/push/subscribe":
+            body = _json_body(event)
+            return handle_push_subscribe(event, body)
+
+        if method == "DELETE" and path == "/push/subscribe":
+            body = _json_body(event)
+            return handle_push_unsubscribe(event, body)
 
         return err("Not found.", 404, code="not_found")
 

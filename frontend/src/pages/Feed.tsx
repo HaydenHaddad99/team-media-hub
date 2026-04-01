@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { listMedia, MediaItem, clearStoredToken, getMe, MeResponse, presignDownload, deleteMedia, getUploaderIdentifier, createBillingCheckoutSession, upgradeBillingSubscription, createBillingPortalSession } from "../lib/api";
+import { listMedia, MediaItem, clearStoredToken, getMe, MeResponse, presignDownload, deleteMedia, getUploaderIdentifier, createBillingCheckoutSession, upgradeBillingSubscription, createBillingPortalSession, subscribePush, unsubscribePush, VAPID_PUBLIC_KEY } from "../lib/api";
 import { getHomeRoute, navigate } from "../lib/navigation";
 import { UploadButton } from "../components/UploadButton";
 import { MediaGrid } from "../components/MediaGrid";
@@ -32,6 +32,8 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
   const [showBillingModal, setShowBillingModal] = useState<boolean>(false);
   const [billingBusy, setBillingBusy] = useState<boolean>(false);
   const [billingMsg, setBillingMsg] = useState<string | null>(null);
+  const [notifStatus, setNotifStatus] = useState<"unknown" | "unsupported" | "denied" | "off" | "on">("unknown");
+  const [notifBusy, setNotifBusy] = useState(false);
 
   const role = me?.invite?.role || localStorage.getItem("tmh_role") || "viewer";
   const canUpload = role === "uploader" || role === "admin" || role === "coach";
@@ -373,7 +375,54 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
     };
   }, [items, loading]);
 
-  // Compute featured album (most recently uploaded media's album)
+  // Check push notification permission/subscription status
+  useEffect(() => {
+    if (!VAPID_PUBLIC_KEY || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+      setNotifStatus("unsupported");
+      return;
+    }
+    if (Notification.permission === "denied") {
+      setNotifStatus("denied");
+      return;
+    }
+    navigator.serviceWorker.ready.then((reg) =>
+      reg.pushManager.getSubscription()
+    ).then((sub) => {
+      setNotifStatus(sub ? "on" : "off");
+    }).catch(() => setNotifStatus("off"));
+  }, []);
+
+  async function toggleNotif() {
+    if (notifBusy) return;
+    setNotifBusy(true);
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      if (notifStatus === "on") {
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) {
+          await unsubscribePush(sub.endpoint);
+          await sub.unsubscribe();
+        }
+        setNotifStatus("off");
+      } else {
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") {
+          setNotifStatus("denied");
+          return;
+        }
+        const sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: VAPID_PUBLIC_KEY,
+        });
+        await subscribePush(sub);
+        setNotifStatus("on");
+      }
+    } catch (e) {
+      console.error("Notification toggle error:", e);
+    } finally {
+      setNotifBusy(false);
+    }
+  }
   const featuredAlbum = (() => {
     if (items.length === 0) return null;
     // Find albums with names (exclude "All uploads")
@@ -696,6 +745,31 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
                   >
                     {billingBusy ? "Loading..." : (me.team?.plan === "free" || !me.team?.plan) ? "Upgrade storage" : "Manage billing"}
                   </button>
+                )}
+              </div>
+            )}
+
+            {/* Notifications */}
+            {notifStatus !== "unsupported" && VAPID_PUBLIC_KEY && (
+              <div className="feed-settings-card">
+                <div className="feed-settings-card-label">Notifications</div>
+                {notifStatus === "denied" ? (
+                  <p className="feed-settings-notif-hint">Notifications are blocked. Enable them in your browser settings.</p>
+                ) : (
+                  <div className="feed-settings-notif-row">
+                    <span className="feed-settings-notif-desc">
+                      {notifStatus === "on" ? "You'll be notified when new photos are uploaded." : "Get notified when new photos are added."}
+                    </span>
+                    <button
+                      type="button"
+                      className={`feed-settings-notif-toggle${notifStatus === "on" ? " feed-settings-notif-toggle--on" : ""}`}
+                      onClick={toggleNotif}
+                      disabled={notifBusy}
+                      aria-label={notifStatus === "on" ? "Turn off notifications" : "Turn on notifications"}
+                    >
+                      {notifBusy ? "…" : notifStatus === "on" ? "On" : "Off"}
+                    </button>
+                  </div>
                 )}
               </div>
             )}

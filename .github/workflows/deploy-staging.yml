@@ -42,6 +42,7 @@ jobs:
       - name: Build frontend (staging)
         env:
           VITE_API_BASE_URL: ${{ vars.STAGING_API_BASE_URL || 'https://295rzgn87a.execute-api.us-east-1.amazonaws.com' }}
+          VITE_VAPID_PUBLIC_KEY: ${{ vars.VAPID_PUBLIC_KEY }}
         run: |
           cd frontend
           npm install
@@ -75,6 +76,13 @@ jobs:
           chmod +x layers/ffmpeg/bin/ffmpeg
           test -f layers/ffmpeg/bin/ffmpeg
 
+      - name: Build pywebpush Lambda layer
+        run: |
+          rm -rf layers/pywebpush/python
+          mkdir -p layers/pywebpush/python
+          python -m pip install -q pywebpush -t layers/pywebpush/python
+          test -d layers/pywebpush/python/pywebpush
+
       - name: Deploy staging stack with CDK
         env:
           DEPLOY_STAGE: staging
@@ -89,6 +97,8 @@ jobs:
           STRIPE_CANCEL_URL: ${{ secrets.STRIPE_CANCEL_URL }}
           CLOUDFRONT_KEY_PAIR_ID: ${{ secrets.CLOUDFRONT_KEY_PAIR_ID }}
           CLOUDFRONT_PRIVATE_KEY: ${{ secrets.CLOUDFRONT_PRIVATE_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          VAPID_PUBLIC_KEY: ${{ vars.VAPID_PUBLIC_KEY }}
         run: |
           npm install -g aws-cdk
           cd infra
