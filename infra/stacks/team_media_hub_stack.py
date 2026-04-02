@@ -104,7 +104,8 @@ class TeamMediaHubStack(Stack):
                     ],
                     allowed_origins=[
                         "https://app.teammediahub.co",
-                        "https://d1slhl30hwmy0i.cloudfront.net",  # Staging CloudFront
+                        "https://d1slhl30hwmy0i.cloudfront.net",  # Staging CloudFront (old)
+                        "https://d2u8ibdrwf4t7.cloudfront.net",   # Staging CloudFront (current)
                     ] if is_staging else [
                         "https://app.teammediahub.co",
                     ],
@@ -378,6 +379,7 @@ class TeamMediaHubStack(Stack):
                 allow_origins=[
                     "https://app.teammediahub.co",
                     "https://d1slhl30hwmy0i.cloudfront.net",
+                    "https://d2u8ibdrwf4t7.cloudfront.net",
                 ] if is_staging else [
                     "https://app.teammediahub.co",
                 ],
