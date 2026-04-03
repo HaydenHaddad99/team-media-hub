@@ -29,7 +29,9 @@ export function JoinTeam() {
       setTeamName(res.team_name || "Team");
       setStep("verify");
     } catch (err: any) {
-      setError(err.message || "Failed to send code");
+      const msg: string = err.message || "";
+      const isNetworkError = msg === "Load failed" || msg === "Failed to fetch" || msg === "NetworkError when attempting to fetch resource.";
+      setError(isNetworkError ? "Connection error — please try again." : msg || "Failed to send code");
     } finally {
       setLoading(false);
     }
@@ -63,7 +65,9 @@ export function JoinTeam() {
       // Redirect to team feed (client-side navigation)
       navigate(`/team/${res.team_id}`);
     } catch (err: any) {
-      setError(err.message || "Invalid code");
+      const msg: string = err.message || "";
+      const isNetworkError = msg === "Load failed" || msg === "Failed to fetch" || msg === "NetworkError when attempting to fetch resource.";
+      setError(isNetworkError ? "Connection error — please try again." : msg || "Invalid code");
     } finally {
       setLoading(false);
     }
