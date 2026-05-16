@@ -1,16 +1,24 @@
 import React, { useState } from "react";
-import { request } from "../lib/api";
+import { request, lookupTeams, TeamSummary } from "../lib/api";
 import { navigate, rememberLastTeam } from "../lib/navigation";
 import { PublicNav } from "../components/PublicNav";
 
+type Step = "email" | "verify";
+
 export function JoinTeam() {
-  const [step, setStep] = useState<"email" | "verify">("email");
+  const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
   const [teamCode, setTeamCode] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
   const [teamName, setTeamName] = useState("");
+  const [foundTeams, setFoundTeams] = useState<TeamSummary[] | null>(null);
+  const [selectedTeam, setSelectedTeam] = useState<TeamSummary | null>(null);
+  const [showManualCode, setShowManualCode] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Resolve which team code to use for the request
+  const resolvedTeamCode = selectedTeam?.team_code ?? teamCode;
 
   async function handleRequestCode(e: React.FormEvent) {
     e.preventDefault();
@@ -18,23 +26,52 @@ export function JoinTeam() {
     setLoading(true);
 
     try {
-      const res = await request<{team_name: string}>("/auth/join-team", {
-        method: "POST",
-        body: JSON.stringify({
-          email: email.trim().toLowerCase(),
-          team_code: teamCode.trim().toUpperCase(),
-        }),
-      });
+      // First time on email step: look up known teams for this email
+      if (foundTeams === null) {
+        const teams = await lookupTeams(email.trim().toLowerCase());
+        setFoundTeams(teams);
 
-      setTeamName(res.team_name || "Team");
-      setStep("verify");
+        if (teams.length === 1) {
+          // Auto-select the single team — skip picker
+          setSelectedTeam(teams[0]);
+          await sendCode(email.trim().toLowerCase(), teams[0].team_code);
+          return;
+        }
+
+        if (teams.length > 1) {
+          // Show picker — user picks, then clicks Continue again
+          setLoading(false);
+          return;
+        }
+
+        // No known teams — show manual code entry
+        setShowManualCode(true);
+        setLoading(false);
+        return;
+      }
+
+      // User already saw the picker or manual entry — proceed to send code
+      const code = resolvedTeamCode.trim().toUpperCase();
+      if (!code) {
+        setError("Please enter your team code.");
+        setLoading(false);
+        return;
+      }
+      await sendCode(email.trim().toLowerCase(), code);
     } catch (err: any) {
-      const msg: string = err.message || "";
-      const isNetworkError = msg === "Load failed" || msg === "Failed to fetch" || msg === "NetworkError when attempting to fetch resource.";
-      setError(isNetworkError ? "Connection error — please try again." : msg || "Failed to send code");
+      setError(networkAwareMessage(err));
     } finally {
       setLoading(false);
     }
+  }
+
+  async function sendCode(emailVal: string, code: string) {
+    const res = await request<{ team_name: string }>("/auth/join-team", {
+      method: "POST",
+      body: JSON.stringify({ email: emailVal, team_code: code }),
+    });
+    setTeamName(res.team_name || "Team");
+    setStep("verify");
   }
 
   async function handleVerify(e: React.FormEvent) {
@@ -43,16 +80,20 @@ export function JoinTeam() {
     setLoading(true);
 
     try {
-      const res = await request<{session_token: string; team_id: string; user_id: string; team_name?: string}>("/auth/verify", {
+      const res = await request<{
+        session_token: string;
+        team_id: string;
+        user_id: string;
+        team_name?: string;
+      }>("/auth/verify", {
         method: "POST",
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
           code: verificationCode.trim(),
-          team_code: teamCode.trim().toUpperCase(),
+          team_code: resolvedTeamCode.trim().toUpperCase(),
         }),
       });
 
-      // Store session and team context
       localStorage.setItem("tmh_invite_token", res.session_token);
       localStorage.setItem("team_id", res.team_id);
       localStorage.setItem("tmh_current_team_id", res.team_id);
@@ -61,25 +102,116 @@ export function JoinTeam() {
         localStorage.setItem("team_name", res.team_name);
       }
       rememberLastTeam(res.team_id);
-
-      // Redirect to team feed (client-side navigation)
       navigate(`/team/${res.team_id}`);
     } catch (err: any) {
-      const msg: string = err.message || "";
-      const isNetworkError = msg === "Load failed" || msg === "Failed to fetch" || msg === "NetworkError when attempting to fetch resource.";
-      setError(isNetworkError ? "Connection error — please try again." : msg || "Invalid code");
+      setError(networkAwareMessage(err));
     } finally {
       setLoading(false);
     }
+  }
+
+  function networkAwareMessage(err: any): string {
+    const msg: string = err?.message || "";
+    const isNetwork =
+      msg === "Load failed" ||
+      msg === "Failed to fetch" ||
+      msg === "NetworkError when attempting to fetch resource.";
+    return isNetwork ? "Connection error — please try again." : msg || "Something went wrong";
   }
 
   const title = step === "verify" ? "Check Your Email" : "Join Your Team";
   const description =
     step === "verify"
       ? `We sent a 6-digit code to ${email}. Enter it below to open your team feed.`
-      : "Use your email and team code to access your team's private photos and videos.";
+      : "Enter your email to access your team's private photos and videos.";
 
-  const content = step === "verify" ? (
+  const emailStepContent = (
+    <section className="joinTeamCard" aria-labelledby="join-team-title">
+      <div className="joinTeamCardHeader">
+        <span className="joinTeamEyebrow">Private Family Feed</span>
+        <h1 id="join-team-title" className="joinTeamTitle">{title}</h1>
+        <p className="joinTeamDescription">{description}</p>
+      </div>
+
+      <form className="joinTeamForm" onSubmit={handleRequestCode}>
+        <div className="joinTeamField">
+          <label className="joinTeamLabel">Email</label>
+          <input
+            type="email"
+            className="input joinTeamInput"
+            placeholder="parent@example.com"
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              // Reset lookup state if they change their email
+              setFoundTeams(null);
+              setSelectedTeam(null);
+              setShowManualCode(false);
+            }}
+            required
+          />
+        </div>
+
+        {/* Multi-team picker */}
+        {foundTeams && foundTeams.length > 1 && (
+          <div className="joinTeamField">
+            <label className="joinTeamLabel">Select your team</label>
+            <div className="joinTeamTeamPicker">
+              {foundTeams.map((team) => (
+                <button
+                  key={team.team_id}
+                  type="button"
+                  className={`btn${selectedTeam?.team_id === team.team_id ? " primary" : ""}`}
+                  onClick={() => setSelectedTeam(team)}
+                >
+                  {team.team_name}
+                  {selectedTeam?.team_id === team.team_id && " ✓"}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Single team found — show confirmation */}
+        {foundTeams && foundTeams.length === 1 && !loading && (
+          <div className="joinTeamField">
+            <p className="muted joinTeamFoundTeam">
+              We found your team: <strong>{foundTeams[0].team_name}</strong>
+            </p>
+          </div>
+        )}
+
+        {/* Manual team code entry for new users */}
+        {showManualCode && (
+          <div className="joinTeamField">
+            <label className="joinTeamLabel">Team Code</label>
+            <input
+              type="text"
+              className="input joinTeamInput"
+              placeholder="DALLAS-11B"
+              value={teamCode}
+              onChange={(e) => setTeamCode(e.target.value.toUpperCase())}
+              required
+              autoFocus
+            />
+            <small className="joinTeamHint">Ask your coach for the team code</small>
+          </div>
+        )}
+
+        {error && <div className="joinTeamError">{error}</div>}
+
+        <button
+          type="submit"
+          className="btn btn-primary joinTeamButton"
+          disabled={loading || (foundTeams !== null && foundTeams.length > 1 && !selectedTeam)}
+        >
+          {loading ? "Please wait..." : "Continue"}
+        </button>
+      </form>
+    </section>
+  );
+
+  const verifyStepContent = (
     <section className="joinTeamCard" aria-labelledby="join-team-title">
       <div className="joinTeamCardHeader">
         <span className="joinTeamEyebrow">Secure Access</span>
@@ -103,9 +235,7 @@ export function JoinTeam() {
           />
         </div>
 
-        {error && (
-          <div className="joinTeamError">{error}</div>
-        )}
+        {error && <div className="joinTeamError">{error}</div>}
 
         <button type="submit" className="btn btn-primary joinTeamButton" disabled={loading}>
           {loading ? "Verifying..." : `Join ${teamName}`}
@@ -114,54 +244,13 @@ export function JoinTeam() {
         <button
           type="button"
           className="btn joinTeamButton joinTeamSecondaryButton"
-          onClick={() => setStep("email")}
+          onClick={() => {
+            setStep("email");
+            setVerificationCode("");
+            setError("");
+          }}
         >
           Back
-        </button>
-      </form>
-    </section>
-  ) : (
-    <section className="joinTeamCard" aria-labelledby="join-team-title">
-      <div className="joinTeamCardHeader">
-        <span className="joinTeamEyebrow">Private Family Feed</span>
-        <h1 id="join-team-title" className="joinTeamTitle">{title}</h1>
-        <p className="joinTeamDescription">{description}</p>
-      </div>
-
-      <form className="joinTeamForm" onSubmit={handleRequestCode}>
-        <div className="joinTeamField">
-          <label className="joinTeamLabel">Email</label>
-          <input
-            type="email"
-            className="input joinTeamInput"
-            placeholder="parent@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        </div>
-
-        <div className="joinTeamField">
-          <label className="joinTeamLabel">Team Code</label>
-          <input
-            type="text"
-            className="input joinTeamInput"
-            placeholder="DALLAS-11B"
-            value={teamCode}
-            onChange={(e) => setTeamCode(e.target.value.toUpperCase())}
-            required
-          />
-          <small className="joinTeamHint">
-            Ask your coach for the team code
-          </small>
-        </div>
-
-        {error && (
-          <div className="joinTeamError">{error}</div>
-        )}
-
-        <button type="submit" className="btn btn-primary joinTeamButton" disabled={loading}>
-          {loading ? "Sending..." : "Continue"}
         </button>
       </form>
     </section>
@@ -176,8 +265,7 @@ export function JoinTeam() {
             <span className="joinTeamIntroBadge">Team Media Hub</span>
             <h2 className="joinTeamIntroTitle">Fast access for parents and family members.</h2>
             <p className="joinTeamIntroText">
-              Enter your team code, verify your email, and open a private feed built for sharing game-day photos,
-              videos, and updates without juggling group texts.
+              Enter your email to access your team's private photo and video feed — no passwords, no group texts.
             </p>
             <ul className="joinTeamIntroList">
               <li>One-time verification code sent to your email</li>
@@ -185,7 +273,7 @@ export function JoinTeam() {
               <li>Works on phone, tablet, and desktop</li>
             </ul>
           </section>
-          {content}
+          {step === "verify" ? verifyStepContent : emailStepContent}
         </div>
       </div>
     </div>

@@ -16,6 +16,7 @@ from handlers.media_presign_download import handle_media_presign_download
 from handlers.media_thumbnail import handle_media_thumbnail
 from handlers.media_delete import handle_media_delete
 from handlers.auth_join_team import handle_auth_join_team
+from handlers.auth_lookup_teams import handle_auth_lookup_teams
 from handlers.auth_verify import handle_auth_verify
 from handlers.auth_coach_signin import handle_coach_signin
 from handlers.auth_verify_coach import handle_verify_coach
@@ -101,6 +102,9 @@ def handler(event: Dict, context: Any) -> Dict:
             body = _json_body(event)
             return handle_invites_create(event, body)
         
+        if method == "GET" and path == "/auth/lookup-teams":
+            return handle_auth_lookup_teams(event)
+
         if method == "POST" and path == "/auth/join-team":
             body = _json_body(event)
             return handle_auth_join_team(event, body)
