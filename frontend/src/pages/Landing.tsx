@@ -158,7 +158,7 @@ export function Landing({ onReady }: { onReady: () => void }) {
             }}
             style={{ marginRight: 8 }}
           >
-            Join with Team Code
+            Find Your Team
           </button>
           <button className="btn" onClick={() => setShowManual(!showManual)}>
             {showManual ? "Hide" : "Have a token? Paste it"}
