@@ -484,6 +484,20 @@ html, body {
   margin-top: -6px;
 }
 
+.joinTeamTeamPicker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.joinTeamTeamPicker .btn {
+  text-align: left;
+}
+
+.joinTeamFoundTeam {
+  margin: 0;
+}
+
 @media (max-width: 720px) {
   .appNav {
     flex-direction: column;

@@ -385,6 +385,7 @@ class TeamMediaHubStack(Stack):
             ("/teams/{team_id}", apigwv2.HttpMethod.DELETE),
             ("/invites", apigwv2.HttpMethod.POST),
             ("/invites/revoke", apigwv2.HttpMethod.POST),
+            ("/auth/lookup-teams", apigwv2.HttpMethod.GET),
             ("/auth/join-team", apigwv2.HttpMethod.POST),
             ("/auth/verify", apigwv2.HttpMethod.POST),
             ("/auth/coach-signin", apigwv2.HttpMethod.POST),

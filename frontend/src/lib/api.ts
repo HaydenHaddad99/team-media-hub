@@ -273,3 +273,36 @@ export async function createBillingPortalSession(input: { team_id: string }) {
     body: JSON.stringify(input),
   });
 }
+
+export interface TeamSummary {
+  team_id: string;
+  team_name: string;
+  team_code: string;
+}
+
+export async function lookupTeams(email: string): Promise<TeamSummary[]> {
+  const params = new URLSearchParams({ email });
+  const data = await request<{ teams: TeamSummary[] }>(`/auth/lookup-teams?${params}`);
+  return data.teams ?? [];
+}
+
+/** VAPID public key for Web Push — baked in at build time */
+export const VAPID_PUBLIC_KEY: string = (import.meta.env.VITE_VAPID_PUBLIC_KEY as string) || "";
+
+export async function subscribePush(subscription: PushSubscription): Promise<void> {
+  const json = subscription.toJSON();
+  await request<{ ok: boolean }>("/push/subscribe", {
+    method: "POST",
+    body: JSON.stringify({
+      endpoint: json.endpoint,
+      keys: json.keys,
+    }),
+  });
+}
+
+export async function unsubscribePush(endpoint: string): Promise<void> {
+  await request<{ ok: boolean }>("/push/subscribe", {
+    method: "DELETE",
+    body: JSON.stringify({ endpoint }),
+  });
+}
