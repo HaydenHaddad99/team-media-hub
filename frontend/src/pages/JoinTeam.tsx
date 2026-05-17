@@ -119,16 +119,15 @@ export function JoinTeam() {
     return isNetwork ? "Connection error — please try again." : msg || "Something went wrong";
   }
 
-  const title = step === "verify" ? "Check Your Email" : "Join Your Team";
+  const title = step === "verify" ? "Check Your Email" : "Access Your Team";
   const description =
     step === "verify"
-      ? `We sent a 6-digit code to ${email}. Enter it below to open your team feed.`
-      : "Enter your email to access your team's private photos and videos.";
+      ? `We sent a 6-digit code to ${email}.`
+      : "Enter your email to get a one-time sign-in code.";
 
   const emailStepContent = (
     <section className="joinTeamCard" aria-labelledby="join-team-title">
       <div className="joinTeamCardHeader">
-        <span className="joinTeamEyebrow">Private Family Feed</span>
         <h1 id="join-team-title" className="joinTeamTitle">{title}</h1>
         <p className="joinTeamDescription">{description}</p>
       </div>
@@ -214,7 +213,6 @@ export function JoinTeam() {
   const verifyStepContent = (
     <section className="joinTeamCard" aria-labelledby="join-team-title">
       <div className="joinTeamCardHeader">
-        <span className="joinTeamEyebrow">Secure Access</span>
         <h1 id="join-team-title" className="joinTeamTitle">{title}</h1>
         <p className="joinTeamDescription">{description}</p>
       </div>
@@ -260,21 +258,7 @@ export function JoinTeam() {
     <div className="joinTeamPage">
       <PublicNav />
       <div className="joinTeamCenter">
-        <div className="joinTeamLayout">
-          <section className="joinTeamIntro" aria-label="Join team introduction">
-            <span className="joinTeamIntroBadge">Team Media Hub</span>
-            <h2 className="joinTeamIntroTitle">Fast access for parents and family members.</h2>
-            <p className="joinTeamIntroText">
-              Enter your email to access your team's private photo and video feed — no passwords, no group texts.
-            </p>
-            <ul className="joinTeamIntroList">
-              <li>One-time verification code sent to your email</li>
-              <li>Private access scoped to the team your coach invited you to</li>
-              <li>Works on phone, tablet, and desktop</li>
-            </ul>
-          </section>
-          {step === "verify" ? verifyStepContent : emailStepContent}
-        </div>
+        {step === "verify" ? verifyStepContent : emailStepContent}
       </div>
     </div>
   );
