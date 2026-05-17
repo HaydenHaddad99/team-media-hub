@@ -52,7 +52,7 @@ export function LandingPageNew({ onReady }: LandingPageNewProps) {
             className="cta-primary"
             onClick={handleJoinClick}
           >
-            Join with Team Code
+            Find Your Team
           </button>
 
           <p className="coach-link">
@@ -137,7 +137,7 @@ export function LandingPageNew({ onReady }: LandingPageNewProps) {
       <section className="cta-section">
         <h2>Ready to get started?</h2>
         <button className="cta-primary" onClick={handleJoinClick}>
-          Join with Team Code
+          Find Your Team
         </button>
       </section>
 
