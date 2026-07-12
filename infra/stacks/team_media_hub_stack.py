@@ -273,6 +273,16 @@ class TeamMediaHubStack(Stack):
             removal_policy=RemovalPolicy.DESTROY,
         )
 
+        # Device tokens table (native push — Capacitor iOS/Android app via SNS/APNs/FCM)
+        device_tokens_table = dynamodb.Table(
+            self,
+            "DeviceTokensTable",
+            partition_key=dynamodb.Attribute(name="team_id", type=dynamodb.AttributeType.STRING),
+            sort_key=dynamodb.Attribute(name="device_token_hash", type=dynamodb.AttributeType.STRING),
+            billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
+            removal_policy=RemovalPolicy.DESTROY,
+        )
+
         # -------------------------
         # Backend: Lambda + HTTP API
         # -------------------------
@@ -314,6 +324,9 @@ class TeamMediaHubStack(Stack):
                 "TABLE_USER_TOKENS": user_tokens_table.table_name,
                 "TABLE_WEBHOOK_EVENTS": webhook_events_table.table_name,
                 "TABLE_PUSH_SUBSCRIPTIONS": push_subscriptions_table.table_name,
+                "TABLE_DEVICE_TOKENS": device_tokens_table.table_name,
+                "SNS_PLATFORM_APP_ARN_IOS": os.getenv("SNS_PLATFORM_APP_ARN_IOS", ""),
+                "SNS_PLATFORM_APP_ARN_ANDROID": os.getenv("SNS_PLATFORM_APP_ARN_ANDROID", ""),
                 "SIGNED_URL_TTL_SECONDS": "900",
                 "MAX_UPLOAD_BYTES": str(300 * 1024 * 1024),
                 "ALLOWED_CONTENT_TYPES": "image/jpeg,image/png,image/heic,video/mp4,video/quicktime",
@@ -348,6 +361,12 @@ class TeamMediaHubStack(Stack):
         user_tokens_table.grant_read_write_data(api_fn)
         webhook_events_table.grant_read_write_data(api_fn)
         push_subscriptions_table.grant_read_write_data(api_fn)
+        device_tokens_table.grant_read_write_data(api_fn)
+
+        api_fn.add_to_role_policy(iam.PolicyStatement(
+            actions=["sns:CreatePlatformEndpoint", "sns:DeleteEndpoint", "sns:SetEndpointAttributes"],
+            resources=["*"],
+        ))
 
         api_fn.add_to_role_policy(iam.PolicyStatement(
             actions=["s3:PutObject", "s3:GetObject", "s3:HeadObject", "s3:DeleteObject"],
@@ -378,8 +397,12 @@ class TeamMediaHubStack(Stack):
                 allow_origins=[
                     "https://app.teammediahub.co",
                     "https://d1slhl30hwmy0i.cloudfront.net",
+                    "https://localhost",  # Capacitor Android WebView origin
+                    "capacitor://localhost",  # Capacitor iOS WebView origin
                 ] if is_staging else [
                     "https://app.teammediahub.co",
+                    "https://localhost",  # Capacitor Android WebView origin
+                    "capacitor://localhost",  # Capacitor iOS WebView origin
                 ],
                 max_age=Duration.days(10),
             ),
@@ -418,6 +441,8 @@ class TeamMediaHubStack(Stack):
             ("/media/download-url", apigwv2.HttpMethod.GET),
             ("/push/subscribe", apigwv2.HttpMethod.POST),
             ("/push/subscribe", apigwv2.HttpMethod.DELETE),
+            ("/devices/register", apigwv2.HttpMethod.POST),
+            ("/devices/register", apigwv2.HttpMethod.DELETE),
         ]:
             http_api.add_routes(path=route[0], methods=[route[1]], integration=integration)
 
@@ -490,6 +515,7 @@ class TeamMediaHubStack(Stack):
             environment={
                 "TABLE_TEAMS": teams_table.table_name,
                 "TABLE_PUSH_SUBSCRIPTIONS": push_subscriptions_table.table_name,
+                "TABLE_DEVICE_TOKENS": device_tokens_table.table_name,
                 "VAPID_PRIVATE_KEY": os.getenv("VAPID_PRIVATE_KEY", ""),
                 "VAPID_PUBLIC_KEY": os.getenv("VAPID_PUBLIC_KEY", ""),
                 "VAPID_CONTACT": "mailto:support@teammediahub.co",
@@ -499,6 +525,11 @@ class TeamMediaHubStack(Stack):
 
         teams_table.grant_read_write_data(notif_fn)
         push_subscriptions_table.grant_read_write_data(notif_fn)
+        device_tokens_table.grant_read_write_data(notif_fn)
+        notif_fn.add_to_role_policy(iam.PolicyStatement(
+            actions=["sns:Publish"],
+            resources=["*"],
+        ))
 
         # Trigger every 5 minutes via EventBridge
         events.Rule(

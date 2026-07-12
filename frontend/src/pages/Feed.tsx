@@ -6,6 +6,7 @@ import { UploadButton } from "../components/UploadButton";
 import { MediaGrid } from "../components/MediaGrid";
 import { AlbumGrid, AlbumData } from "../components/AlbumGrid";
 import { applyThumbUrlCache, clearThumbUrlCache } from "../lib/thumbUrlCache";
+import { isNativePlatform } from "../lib/platform";
 import "../styles/pages.css";
 
 export function Feed({ onLogout }: { onLogout: () => void }) {
@@ -728,7 +729,12 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
                     Storage is getting full — notify your admin to upgrade.
                   </div>
                 )}
-                {canManageBilling && (
+                {canManageBilling && isNativePlatform() && (
+                  <div className="feed-settings-warning-top">
+                    Manage your plan at teammediahub.co
+                  </div>
+                )}
+                {canManageBilling && !isNativePlatform() && (
                   <button
                     type="button"
                     className="feed-v2-btn-manage-billing feed-settings-billing-btn"

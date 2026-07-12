@@ -14,6 +14,13 @@ TABLE_AUTH_CODES = os.getenv("TABLE_AUTH_CODES", "")
 TABLE_WEBHOOK_EVENTS = os.getenv("TABLE_WEBHOOK_EVENTS", "")
 
 TABLE_PUSH_SUBSCRIPTIONS = os.getenv("TABLE_PUSH_SUBSCRIPTIONS", "")
+TABLE_DEVICE_TOKENS = os.getenv("TABLE_DEVICE_TOKENS", "")
+
+# SNS platform application ARNs for native push (APNs/FCM). Empty until the
+# Apple Developer / Firebase accounts exist — device registration and sending
+# both no-op gracefully when unset.
+SNS_PLATFORM_APP_ARN_IOS = os.getenv("SNS_PLATFORM_APP_ARN_IOS", "")
+SNS_PLATFORM_APP_ARN_ANDROID = os.getenv("SNS_PLATFORM_APP_ARN_ANDROID", "")
 
 MEDIA_BUCKET = os.getenv("MEDIA_BUCKET", "")
 

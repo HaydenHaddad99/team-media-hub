@@ -29,6 +29,7 @@ TEST_ENV = {
     "TABLE_WEBHOOK_EVENTS": "WebhookEvents",
     "TABLE_USER_TOKENS": "UserTokens",
     "TABLE_PUSH_SUBSCRIPTIONS": "PushSubscriptions",
+    "TABLE_DEVICE_TOKENS": "DeviceTokens",
     "MEDIA_BUCKET": "test-media-bucket",
     "MEDIA_GSI_NAME": "gsi1",
     "SETUP_KEY": "test-setup-key",
@@ -66,7 +67,17 @@ def _create_tables(dynamodb):
     dynamodb.create_table(
         TableName="Teams",
         KeySchema=[{"AttributeName": "team_id", "KeyType": "HASH"}],
-        AttributeDefinitions=[{"AttributeName": "team_id", "AttributeType": "S"}],
+        AttributeDefinitions=[
+            {"AttributeName": "team_id", "AttributeType": "S"},
+            {"AttributeName": "team_code", "AttributeType": "S"},
+        ],
+        GlobalSecondaryIndexes=[
+            {
+                "IndexName": "team-code-index",
+                "KeySchema": [{"AttributeName": "team_code", "KeyType": "HASH"}],
+                "Projection": {"ProjectionType": "ALL"},
+            }
+        ],
         BillingMode="PAY_PER_REQUEST",
     )
     dynamodb.create_table(
@@ -172,6 +183,18 @@ def _create_tables(dynamodb):
         ],
         BillingMode="PAY_PER_REQUEST",
     )
+    dynamodb.create_table(
+        TableName="DeviceTokens",
+        KeySchema=[
+            {"AttributeName": "team_id", "KeyType": "HASH"},
+            {"AttributeName": "device_token_hash", "KeyType": "RANGE"},
+        ],
+        AttributeDefinitions=[
+            {"AttributeName": "team_id", "AttributeType": "S"},
+            {"AttributeName": "device_token_hash", "AttributeType": "S"},
+        ],
+        BillingMode="PAY_PER_REQUEST",
+    )
 
 
 @pytest.fixture
@@ -203,6 +226,7 @@ def aws(monkeypatch):
         monkeypatch.setattr("common.config.TABLE_AUTH_CODES", "AuthCodes")
         monkeypatch.setattr("common.config.TABLE_WEBHOOK_EVENTS", "WebhookEvents")
         monkeypatch.setattr("common.config.TABLE_PUSH_SUBSCRIPTIONS", "PushSubscriptions")
+        monkeypatch.setattr("common.config.TABLE_DEVICE_TOKENS", "DeviceTokens")
         monkeypatch.setattr("common.config.MEDIA_BUCKET", "test-media-bucket")
         monkeypatch.setattr("common.config.SETUP_KEY", "test-setup-key")
 
@@ -214,6 +238,7 @@ def aws(monkeypatch):
             "media_table": ddb.Table("Media"),
             "audit_table": ddb.Table("Audit"),
             "push_subscriptions_table": ddb.Table("PushSubscriptions"),
+            "device_tokens_table": ddb.Table("DeviceTokens"),
         }
 
 

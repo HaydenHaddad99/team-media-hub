@@ -20,11 +20,21 @@ def hash_token(token: str) -> str:
     """Hash token for storage."""
     return hashlib.sha256(token.encode()).hexdigest()
 
+SESSION_TTL_SECONDS_BY_CLIENT = {
+    "mobile": 90 * 86400,
+    "web": 365 * 86400,
+}
+
+
 def handle_auth_verify(event, body=None):
     """
     POST /auth/verify
-    Body: {"email": "parent@example.com", "code": "123456", "team_code": "DALLAS-11B"}
-    
+    Body: {"email": "parent@example.com", "code": "123456", "team_code": "DALLAS-11B", "client": "web"}
+
+    "client" is optional and defaults to "web" (365-day session, unchanged
+    behavior). The Capacitor mobile app passes "client": "mobile" to get a
+    shorter 90-day session, after which it re-prompts for a fresh email code.
+
     Returns: {"ok": true, "session_token": "...", "user_id": "...", "team_id": "..."}
     """
     if body is None:
@@ -33,6 +43,8 @@ def handle_auth_verify(event, body=None):
         email = body.get("email", "").strip().lower()
         code = body.get("code", "").strip()
         team_code = body.get("team_code", "").strip().upper()
+        client = body.get("client", "web").strip().lower()
+        session_ttl_seconds = SESSION_TTL_SECONDS_BY_CLIENT.get(client, SESSION_TTL_SECONDS_BY_CLIENT["web"])
         
         # Validate inputs
         if not email or not code or not team_code:
@@ -70,7 +82,7 @@ def handle_auth_verify(event, body=None):
             "user_id": user_id,  # NEW: link to user
             "email": email,
             "created_at": int(time.time()),
-            "expires_at": int(time.time()) + (365 * 86400),  # 1 year
+            "expires_at": int(time.time()) + session_ttl_seconds,
             "revoked_at": None,
         }
         

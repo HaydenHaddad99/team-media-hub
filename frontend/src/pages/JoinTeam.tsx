@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { request, lookupTeams, TeamSummary } from "../lib/api";
+import { request, lookupTeams, TeamSummary, setStoredToken } from "../lib/api";
 import { navigate, rememberLastTeam } from "../lib/navigation";
 import { PublicNav } from "../components/PublicNav";
+import { isNativePlatform } from "../lib/platform";
 
 type Step = "email" | "verify";
 
@@ -91,10 +92,11 @@ export function JoinTeam() {
           email: email.trim().toLowerCase(),
           code: verificationCode.trim(),
           team_code: resolvedTeamCode.trim().toUpperCase(),
+          client: isNativePlatform() ? "mobile" : "web",
         }),
       });
 
-      localStorage.setItem("tmh_invite_token", res.session_token);
+      setStoredToken(res.session_token);
       localStorage.setItem("team_id", res.team_id);
       localStorage.setItem("tmh_current_team_id", res.team_id);
       localStorage.setItem("tmh_user_id", res.user_id);

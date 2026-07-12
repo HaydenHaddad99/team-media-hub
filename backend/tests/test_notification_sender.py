@@ -7,6 +7,7 @@ from unittest.mock import patch, MagicMock
 # Set env vars before module import
 os.environ.setdefault("TABLE_TEAMS", "Teams")
 os.environ.setdefault("TABLE_PUSH_SUBSCRIPTIONS", "PushSubscriptions")
+os.environ.setdefault("TABLE_DEVICE_TOKENS", "DeviceTokens")
 os.environ.setdefault("VAPID_PRIVATE_KEY", "fake-vapid-private-key")
 os.environ.setdefault("VAPID_PUBLIC_KEY", "fake-vapid-public-key")
 os.environ.setdefault("NOTIFICATION_COOLDOWN_SECONDS", "3600")
@@ -109,6 +110,103 @@ class TestNotificationSenderHandler:
             Key={"team_id": "team-expired", "endpoint_hash": "deadbeef"}
         ).get("Item")
         assert item is None
+
+
+class TestNativePush:
+    def test_sends_to_ios_and_android_devices(self, aws, monkeypatch):
+        now = int(time.time())
+        aws["teams_table"].put_item(Item={
+            "team_id": "team-native",
+            "team_name": "Native Team",
+            "notif_pending_since": now - 7200,
+        })
+        aws["device_tokens_table"].put_item(Item={
+            "team_id": "team-native",
+            "device_token_hash": "ioshash",
+            "device_token": "ios-token",
+            "platform": "ios",
+            "endpoint_arn": "arn:aws:sns:us-east-1:123:endpoint/APNS/app/ios1",
+        })
+        aws["device_tokens_table"].put_item(Item={
+            "team_id": "team-native",
+            "device_token_hash": "androidhash",
+            "device_token": "android-token",
+            "platform": "android",
+            "endpoint_arn": "arn:aws:sns:us-east-1:123:endpoint/GCM/app/android1",
+        })
+
+        mock_sns = MagicMock()
+        monkeypatch.setattr("notifications.notification_sender._sns", mock_sns)
+
+        with patch("notifications.notification_sender.VAPID_PRIVATE_KEY", ""):
+            result = handler({}, None)
+
+        assert result["notified"] == 1
+        assert mock_sns.publish.call_count == 2
+        target_arns = {c.kwargs["TargetArn"] for c in mock_sns.publish.call_args_list}
+        assert target_arns == {
+            "arn:aws:sns:us-east-1:123:endpoint/APNS/app/ios1",
+            "arn:aws:sns:us-east-1:123:endpoint/GCM/app/android1",
+        }
+        for c in mock_sns.publish.call_args_list:
+            assert c.kwargs["MessageStructure"] == "json"
+
+    def test_deletes_disabled_endpoint(self, aws, monkeypatch):
+        now = int(time.time())
+        aws["teams_table"].put_item(Item={
+            "team_id": "team-disabled",
+            "team_name": "Disabled Team",
+            "notif_pending_since": now - 7200,
+        })
+        aws["device_tokens_table"].put_item(Item={
+            "team_id": "team-disabled",
+            "device_token_hash": "deadtoken",
+            "device_token": "dead-token",
+            "platform": "ios",
+            "endpoint_arn": "arn:aws:sns:us-east-1:123:endpoint/APNS/app/dead",
+        })
+
+        class FakeEndpointDisabled(Exception):
+            pass
+
+        mock_sns = MagicMock()
+        mock_sns.exceptions.EndpointDisabledException = FakeEndpointDisabled
+        mock_sns.publish.side_effect = FakeEndpointDisabled("disabled")
+        monkeypatch.setattr("notifications.notification_sender._sns", mock_sns)
+
+        with patch("notifications.notification_sender.VAPID_PRIVATE_KEY", ""):
+            result = handler({}, None)
+
+        assert result["notified"] == 1
+        item = aws["device_tokens_table"].get_item(
+            Key={"team_id": "team-disabled", "device_token_hash": "deadtoken"}
+        ).get("Item")
+        assert item is None
+
+    def test_skips_devices_without_endpoint_arn(self, aws, monkeypatch):
+        """Devices registered before an SNS platform app existed have no endpoint_arn yet."""
+        now = int(time.time())
+        aws["teams_table"].put_item(Item={
+            "team_id": "team-noarn",
+            "team_name": "No ARN Team",
+            "notif_pending_since": now - 7200,
+        })
+        aws["device_tokens_table"].put_item(Item={
+            "team_id": "team-noarn",
+            "device_token_hash": "noarnhash",
+            "device_token": "noarn-token",
+            "platform": "ios",
+            "endpoint_arn": "",
+        })
+
+        mock_sns = MagicMock()
+        monkeypatch.setattr("notifications.notification_sender._sns", mock_sns)
+
+        with patch("notifications.notification_sender.VAPID_PRIVATE_KEY", ""):
+            result = handler({}, None)
+
+        assert result["notified"] == 1
+        mock_sns.publish.assert_not_called()
 
 
 class TestClearFlag:
