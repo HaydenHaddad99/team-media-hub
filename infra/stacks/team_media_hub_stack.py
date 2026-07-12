@@ -397,12 +397,10 @@ class TeamMediaHubStack(Stack):
                 allow_origins=[
                     "https://app.teammediahub.co",
                     "https://d1slhl30hwmy0i.cloudfront.net",
-                    "https://localhost",  # Capacitor Android WebView origin
-                    "capacitor://localhost",  # Capacitor iOS WebView origin
+                    "https://localhost",  # Capacitor iOS/Android WebView origin (iosScheme/androidScheme set to https)
                 ] if is_staging else [
                     "https://app.teammediahub.co",
-                    "https://localhost",  # Capacitor Android WebView origin
-                    "capacitor://localhost",  # Capacitor iOS WebView origin
+                    "https://localhost",  # Capacitor iOS/Android WebView origin (iosScheme/androidScheme set to https)
                 ],
                 max_age=Duration.days(10),
             ),
