@@ -1,7 +1,8 @@
 import time
 import boto3
 import hashlib
-from common.config import TABLE_MEDIA, TABLE_TEAMS, MEDIA_BUCKET
+from botocore.exceptions import ClientError as BotoClientError
+from common.config import TABLE_MEDIA, TABLE_TEAMS, MEDIA_BUCKET, DYNAMODB
 from common.db import put_item, get_item, update_item
 from common.responses import ok, err
 from common.auth import require_invite, require_role
@@ -108,6 +109,18 @@ def handle_media_complete(event, body):
     
     put_item(TABLE_MEDIA, item)
     print(f"[UPLOAD] Saved media record: media_id={media_id}, team_id={team_id}, uploader_user_id={item.get('uploader_user_id', 'NONE')[:16] if item.get('uploader_user_id') else 'NONE'}...")
+
+    # Trigger push notification (first upload in a batch sets the flag; later uploads are no-ops)
+    try:
+        DYNAMODB.Table(TABLE_TEAMS).update_item(
+            Key={"team_id": team_id},
+            UpdateExpression="SET notif_pending_since = :now",
+            ConditionExpression="attribute_not_exists(notif_pending_since)",
+            ExpressionAttributeValues={":now": ts},
+        )
+    except BotoClientError as exc:
+        if exc.response.get("Error", {}).get("Code") != "ConditionalCheckFailedException":
+            print(f"[UPLOAD] Warning: could not set notif_pending_since: {exc}")
 
     # Increment team's used_bytes
     try:

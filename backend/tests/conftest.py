@@ -28,6 +28,7 @@ TEST_ENV = {
     "TABLE_AUTH_CODES": "AuthCodes",
     "TABLE_WEBHOOK_EVENTS": "WebhookEvents",
     "TABLE_USER_TOKENS": "UserTokens",
+    "TABLE_PUSH_SUBSCRIPTIONS": "PushSubscriptions",
     "MEDIA_BUCKET": "test-media-bucket",
     "MEDIA_GSI_NAME": "gsi1",
     "SETUP_KEY": "test-setup-key",
@@ -159,6 +160,18 @@ def _create_tables(dynamodb):
         AttributeDefinitions=[{"AttributeName": "token_hash", "AttributeType": "S"}],
         BillingMode="PAY_PER_REQUEST",
     )
+    dynamodb.create_table(
+        TableName="PushSubscriptions",
+        KeySchema=[
+            {"AttributeName": "team_id", "KeyType": "HASH"},
+            {"AttributeName": "endpoint_hash", "KeyType": "RANGE"},
+        ],
+        AttributeDefinitions=[
+            {"AttributeName": "team_id", "AttributeType": "S"},
+            {"AttributeName": "endpoint_hash", "AttributeType": "S"},
+        ],
+        BillingMode="PAY_PER_REQUEST",
+    )
 
 
 @pytest.fixture
@@ -189,6 +202,7 @@ def aws(monkeypatch):
         monkeypatch.setattr("common.config.TABLE_TEAM_MEMBERS", "TeamMembers")
         monkeypatch.setattr("common.config.TABLE_AUTH_CODES", "AuthCodes")
         monkeypatch.setattr("common.config.TABLE_WEBHOOK_EVENTS", "WebhookEvents")
+        monkeypatch.setattr("common.config.TABLE_PUSH_SUBSCRIPTIONS", "PushSubscriptions")
         monkeypatch.setattr("common.config.MEDIA_BUCKET", "test-media-bucket")
         monkeypatch.setattr("common.config.SETUP_KEY", "test-setup-key")
 
@@ -199,6 +213,7 @@ def aws(monkeypatch):
             "invites_table": ddb.Table("Invites"),
             "media_table": ddb.Table("Media"),
             "audit_table": ddb.Table("Audit"),
+            "push_subscriptions_table": ddb.Table("PushSubscriptions"),
         }
 
 
