@@ -11,3 +11,7 @@ capacitor-cordova-ios-plugins
 # Generated Config files
 App/App/capacitor.config.json
 App/App/config.xml
+
+# Local Xcode workspace state (not the SPM Package.resolved lockfile, that's tracked)
+App.xcodeproj/project.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings
+App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/configuration/

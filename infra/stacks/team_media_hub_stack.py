@@ -382,33 +382,28 @@ class TeamMediaHubStack(Stack):
             resources=["*"]
         ))
 
+        # CORS is handled by the Lambda itself (see common/responses.py), not
+        # API Gateway's declarative CORS: HttpApi's CORS validation rejects
+        # non-http(s) origins outright (e.g. capacitor://localhost, used by
+        # the iOS app's WKWebView — iOS can't be made to use the https scheme
+        # for local content the way Android can via androidScheme), and even
+        # for origins it does accept, API Gateway overrides whatever headers
+        # Lambda returns. So: no cors_preflight here, and OPTIONS is routed
+        # to Lambda like any other request via the catch-all route below.
         http_api = apigwv2.HttpApi(
             self,
             "HttpApi",
-            cors_preflight=apigwv2.CorsPreflightOptions(
-                allow_headers=["content-type", "x-invite-token", "x-setup-key", "x-user-token", "x-coach-user-id", "stripe-signature"],
-                allow_methods=[
-                    apigwv2.CorsHttpMethod.GET,
-                    apigwv2.CorsHttpMethod.POST,
-                    apigwv2.CorsHttpMethod.PUT,
-                    apigwv2.CorsHttpMethod.DELETE,
-                    apigwv2.CorsHttpMethod.OPTIONS,
-                ],
-                allow_origins=[
-                    "https://app.teammediahub.co",
-                    "https://d1slhl30hwmy0i.cloudfront.net",
-                    "https://localhost",  # Capacitor iOS/Android WebView origin (iosScheme/androidScheme set to https)
-                ] if is_staging else [
-                    "https://app.teammediahub.co",
-                    "https://localhost",  # Capacitor iOS/Android WebView origin (iosScheme/androidScheme set to https)
-                ],
-                max_age=Duration.days(10),
-            ),
         )
 
         integration = apigwv2_integrations.HttpLambdaIntegration(
             "LambdaIntegration",
             handler=api_fn
+        )
+
+        http_api.add_routes(
+            path="/{proxy+}",
+            methods=[apigwv2.HttpMethod.OPTIONS],
+            integration=integration,
         )
 
         for route in [
