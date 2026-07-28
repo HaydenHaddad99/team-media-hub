@@ -7,3 +7,4 @@ dist/
 .env
 .DS_Store
 layers/stripe/python/
+*AuthKey_VPMQC44LX8.p8

@@ -26,7 +26,6 @@ class TeamMediaHubStack(Stack):
         super().__init__(scope, construct_id, **kwargs)
 
         self.stage = stage
-        is_staging = stage != "prod"
 
         # -------------------------
         # CloudFormation Parameters
@@ -102,12 +101,13 @@ class TeamMediaHubStack(Stack):
                         s3.HttpMethods.PUT,
                         s3.HttpMethods.POST,
                     ],
-                    allowed_origins=[
-                        "https://app.teammediahub.co",
-                        "https://d1slhl30hwmy0i.cloudfront.net",  # Staging CloudFront
-                    ] if is_staging else [
-                        "https://app.teammediahub.co",
-                    ],
+                    # "*" is safe here: presigned URLs are self-authenticating via
+                    # signature, not cookies, so there's no credential-leak risk.
+                    # Needed for the Capacitor mobile app's WebView origins, which
+                    # (unlike a normal browser) aren't fixed http(s) origins we can
+                    # enumerate — iOS in particular still uses capacitor://localhost
+                    # regardless of the iosScheme config (see commit fa869f8).
+                    allowed_origins=["*"],
                     allowed_headers=["*"],
                     exposed_headers=["ETag", "x-amz-version-id", "Content-Type", "Content-Length"],
                     max_age=3600,
