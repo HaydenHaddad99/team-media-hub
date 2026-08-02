@@ -128,3 +128,34 @@ self.addEventListener('message', (event) => {
     self.skipWaiting();
   }
 });
+
+// Push notification received from server
+self.addEventListener('push', (event) => {
+  let data: { title?: string; body?: string; url?: string } = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = {};
+  }
+  const title = data.title ?? 'Team Media Hub';
+  const options: NotificationOptions = {
+    body: data.body ?? 'New photos were added to your team album! 📸',
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    data: { url: data.url ?? '/' },
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Notification click — focus existing window or open new one
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url: string = (event.notification.data as { url?: string })?.url ?? '/';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      const existing = clients.find((c) => 'focus' in c);
+      if (existing) return (existing as WindowClient).focus();
+      return self.clients.openWindow(url);
+    })
+  );
+});

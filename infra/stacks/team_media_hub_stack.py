@@ -17,6 +17,8 @@ from aws_cdk import (
     aws_cloudfront as cloudfront,
     aws_cloudfront_origins as origins,
     aws_s3_deployment as s3deploy,
+    aws_events as events,
+    aws_events_targets as targets,
 )
 
 class TeamMediaHubStack(Stack):
@@ -24,7 +26,6 @@ class TeamMediaHubStack(Stack):
         super().__init__(scope, construct_id, **kwargs)
 
         self.stage = stage
-        is_staging = stage != "prod"
 
         # -------------------------
         # CloudFormation Parameters
@@ -100,12 +101,13 @@ class TeamMediaHubStack(Stack):
                         s3.HttpMethods.PUT,
                         s3.HttpMethods.POST,
                     ],
-                    allowed_origins=[
-                        "https://app.teammediahub.co",
-                        "https://d1slhl30hwmy0i.cloudfront.net",  # Staging CloudFront
-                    ] if is_staging else [
-                        "https://app.teammediahub.co",
-                    ],
+                    # "*" is safe here: presigned URLs are self-authenticating via
+                    # signature, not cookies, so there's no credential-leak risk.
+                    # Needed for the Capacitor mobile app's WebView origins, which
+                    # (unlike a normal browser) aren't fixed http(s) origins we can
+                    # enumerate — iOS in particular still uses capacitor://localhost
+                    # regardless of the iosScheme config (see commit fa869f8).
+                    allowed_origins=["*"],
                     allowed_headers=["*"],
                     exposed_headers=["ETag", "x-amz-version-id", "Content-Type", "Content-Length"],
                     max_age=3600,
@@ -261,6 +263,26 @@ class TeamMediaHubStack(Stack):
             time_to_live_attribute="expires_at",  # Auto-expire old events after 7 days
         )
 
+        # Push subscriptions table (Web Push / VAPID)
+        push_subscriptions_table = dynamodb.Table(
+            self,
+            "PushSubscriptionsTable",
+            partition_key=dynamodb.Attribute(name="team_id", type=dynamodb.AttributeType.STRING),
+            sort_key=dynamodb.Attribute(name="endpoint_hash", type=dynamodb.AttributeType.STRING),
+            billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
+            removal_policy=RemovalPolicy.DESTROY,
+        )
+
+        # Device tokens table (native push — Capacitor iOS/Android app via SNS/APNs/FCM)
+        device_tokens_table = dynamodb.Table(
+            self,
+            "DeviceTokensTable",
+            partition_key=dynamodb.Attribute(name="team_id", type=dynamodb.AttributeType.STRING),
+            sort_key=dynamodb.Attribute(name="device_token_hash", type=dynamodb.AttributeType.STRING),
+            billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
+            removal_policy=RemovalPolicy.DESTROY,
+        )
+
         # -------------------------
         # Backend: Lambda + HTTP API
         # -------------------------
@@ -301,6 +323,10 @@ class TeamMediaHubStack(Stack):
                 "TABLE_AUTH_CODES": auth_codes_table.table_name,
                 "TABLE_USER_TOKENS": user_tokens_table.table_name,
                 "TABLE_WEBHOOK_EVENTS": webhook_events_table.table_name,
+                "TABLE_PUSH_SUBSCRIPTIONS": push_subscriptions_table.table_name,
+                "TABLE_DEVICE_TOKENS": device_tokens_table.table_name,
+                "SNS_PLATFORM_APP_ARN_IOS": os.getenv("SNS_PLATFORM_APP_ARN_IOS", ""),
+                "SNS_PLATFORM_APP_ARN_ANDROID": os.getenv("SNS_PLATFORM_APP_ARN_ANDROID", ""),
                 "SIGNED_URL_TTL_SECONDS": "900",
                 "MAX_UPLOAD_BYTES": str(300 * 1024 * 1024),
                 "ALLOWED_CONTENT_TYPES": "image/jpeg,image/png,image/heic,video/mp4,video/quicktime",
@@ -334,6 +360,13 @@ class TeamMediaHubStack(Stack):
         auth_codes_table.grant_read_write_data(api_fn)
         user_tokens_table.grant_read_write_data(api_fn)
         webhook_events_table.grant_read_write_data(api_fn)
+        push_subscriptions_table.grant_read_write_data(api_fn)
+        device_tokens_table.grant_read_write_data(api_fn)
+
+        api_fn.add_to_role_policy(iam.PolicyStatement(
+            actions=["sns:CreatePlatformEndpoint", "sns:DeleteEndpoint", "sns:SetEndpointAttributes"],
+            resources=["*"],
+        ))
 
         api_fn.add_to_role_policy(iam.PolicyStatement(
             actions=["s3:PutObject", "s3:GetObject", "s3:HeadObject", "s3:DeleteObject"],
@@ -349,31 +382,28 @@ class TeamMediaHubStack(Stack):
             resources=["*"]
         ))
 
+        # CORS is handled by the Lambda itself (see common/responses.py), not
+        # API Gateway's declarative CORS: HttpApi's CORS validation rejects
+        # non-http(s) origins outright (e.g. capacitor://localhost, used by
+        # the iOS app's WKWebView — iOS can't be made to use the https scheme
+        # for local content the way Android can via androidScheme), and even
+        # for origins it does accept, API Gateway overrides whatever headers
+        # Lambda returns. So: no cors_preflight here, and OPTIONS is routed
+        # to Lambda like any other request via the catch-all route below.
         http_api = apigwv2.HttpApi(
             self,
             "HttpApi",
-            cors_preflight=apigwv2.CorsPreflightOptions(
-                allow_headers=["content-type", "x-invite-token", "x-setup-key", "x-user-token", "x-coach-user-id", "stripe-signature"],
-                allow_methods=[
-                    apigwv2.CorsHttpMethod.GET,
-                    apigwv2.CorsHttpMethod.POST,
-                    apigwv2.CorsHttpMethod.PUT,
-                    apigwv2.CorsHttpMethod.DELETE,
-                    apigwv2.CorsHttpMethod.OPTIONS,
-                ],
-                allow_origins=[
-                    "https://app.teammediahub.co",
-                    "https://d1slhl30hwmy0i.cloudfront.net",
-                ] if is_staging else [
-                    "https://app.teammediahub.co",
-                ],
-                max_age=Duration.days(10),
-            ),
         )
 
         integration = apigwv2_integrations.HttpLambdaIntegration(
             "LambdaIntegration",
             handler=api_fn
+        )
+
+        http_api.add_routes(
+            path="/{proxy+}",
+            methods=[apigwv2.HttpMethod.OPTIONS],
+            integration=integration,
         )
 
         for route in [
@@ -402,6 +432,10 @@ class TeamMediaHubStack(Stack):
             ("/media/upload-url", apigwv2.HttpMethod.POST),
             ("/media/complete", apigwv2.HttpMethod.POST),
             ("/media/download-url", apigwv2.HttpMethod.GET),
+            ("/push/subscribe", apigwv2.HttpMethod.POST),
+            ("/push/subscribe", apigwv2.HttpMethod.DELETE),
+            ("/devices/register", apigwv2.HttpMethod.POST),
+            ("/devices/register", apigwv2.HttpMethod.DELETE),
         ]:
             http_api.add_routes(path=route[0], methods=[route[1]], integration=integration)
 
@@ -449,6 +483,53 @@ class TeamMediaHubStack(Stack):
             s3.EventType.OBJECT_CREATED,
             s3n.LambdaDestination(thumb_fn),
             s3.NotificationKeyFilter(prefix="media/")
+        )
+
+        # -------------------------
+        # Push Notification Sender Lambda + EventBridge
+        # -------------------------
+        pywebpush_layer = _lambda.LayerVersion(
+            self,
+            "PywebpushLayer",
+            code=_lambda.Code.from_asset("../layers/pywebpush"),
+            compatible_runtimes=[_lambda.Runtime.PYTHON_3_12],
+            description="pywebpush + py_vapid for Web Push notifications",
+        )
+
+        notif_fn = _lambda.Function(
+            self,
+            "NotificationSenderFunction",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="notifications.notification_sender.handler",
+            code=_lambda.Code.from_asset("../backend/src"),
+            timeout=Duration.seconds(60),
+            memory_size=256,
+            layers=[pywebpush_layer, cryptography_layer],
+            environment={
+                "TABLE_TEAMS": teams_table.table_name,
+                "TABLE_PUSH_SUBSCRIPTIONS": push_subscriptions_table.table_name,
+                "TABLE_DEVICE_TOKENS": device_tokens_table.table_name,
+                "VAPID_PRIVATE_KEY": os.getenv("VAPID_PRIVATE_KEY", ""),
+                "VAPID_PUBLIC_KEY": os.getenv("VAPID_PUBLIC_KEY", ""),
+                "VAPID_CONTACT": "mailto:support@teammediahub.co",
+                "NOTIFICATION_COOLDOWN_SECONDS": "3600",
+            },
+        )
+
+        teams_table.grant_read_write_data(notif_fn)
+        push_subscriptions_table.grant_read_write_data(notif_fn)
+        device_tokens_table.grant_read_write_data(notif_fn)
+        notif_fn.add_to_role_policy(iam.PolicyStatement(
+            actions=["sns:Publish"],
+            resources=["*"],
+        ))
+
+        # Trigger every 5 minutes via EventBridge
+        events.Rule(
+            self,
+            "NotifScheduleRule",
+            schedule=events.Schedule.rate(Duration.minutes(5)),
+            targets=[targets.LambdaFunction(notif_fn)],
         )
 
         # -------------------------

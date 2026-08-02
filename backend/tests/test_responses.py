@@ -23,8 +23,14 @@ class TestOk:
     def test_ok_cors_headers(self):
         resp = ok({})
         h = resp["headers"]
+        # "*" is what actually reaches the client: API Gateway's declarative
+        # CORS is not used (it rejects non-http(s) origins like the iOS app's
+        # capacitor://localhost), so this header is the sole source of truth.
         assert h["access-control-allow-origin"] == "*"
-        assert "x-invite-token" in h["access-control-allow-headers"]
+        for expected_header in ("x-invite-token", "x-setup-key", "x-user-token", "x-coach-user-id", "stripe-signature"):
+            assert expected_header in h["access-control-allow-headers"]
+        for expected_method in ("GET", "POST", "PUT", "DELETE", "OPTIONS"):
+            assert expected_method in h["access-control-allow-methods"]
 
 
 class TestErr:

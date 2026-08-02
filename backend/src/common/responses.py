@@ -5,10 +5,16 @@ def _headers(extra: Optional[Dict[str, str]] = None) -> Dict[str, str]:
     base = {
         "content-type": "application/json",
         "cache-control": "no-store",
-        # CORS (tighten to your domain later)
+        # CORS is handled entirely here, not via API Gateway's declarative CORS
+        # config: HttpApi's CORS validation rejects non-http(s) origins (e.g.
+        # capacitor://localhost, used by the iOS app's WKWebView), and even
+        # when an origin is allowed there, API Gateway overrides whatever
+        # Lambda returns. "*" is safe since this API never uses cookies/
+        # credentialed requests — auth is via custom headers (x-invite-token
+        # etc.), not cookies.
         "access-control-allow-origin": "*",
-        "access-control-allow-headers": "content-type,x-invite-token",
-        "access-control-allow-methods": "GET,POST,OPTIONS",
+        "access-control-allow-headers": "content-type,x-invite-token,x-setup-key,x-user-token,x-coach-user-id,stripe-signature",
+        "access-control-allow-methods": "GET,POST,PUT,DELETE,OPTIONS",
     }
     if extra:
         base.update(extra)

@@ -1,8 +1,31 @@
+import { isNativePlatform } from "./platform";
+
 export type ApiError = {
   error?: { message?: string; code?: string };
 };
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string || "").replace(/\/+$/, "");
+
+/**
+ * On native, mirror the session token into Keychain/Keystore alongside the
+ * WebView's localStorage copy, for defense-in-depth. Fire-and-forget: reads
+ * still go through localStorage (which already persists across app
+ * launches inside the Capacitor WebView), so this never blocks or changes
+ * the synchronous token API.
+ */
+async function mirrorTokenToSecureStorage(token: string | null) {
+  if (!isNativePlatform()) return;
+  try {
+    const { SecureStoragePlugin } = await import("capacitor-secure-storage-plugin");
+    if (token) {
+      await SecureStoragePlugin.set({ key: "tmh_invite_token", value: token });
+    } else {
+      await SecureStoragePlugin.remove({ key: "tmh_invite_token" });
+    }
+  } catch {
+    // Plugin unavailable on this build — localStorage remains the source of truth.
+  }
+}
 
 function getStoredToken(): string | null {
   return localStorage.getItem("tmh_invite_token");
@@ -10,10 +33,12 @@ function getStoredToken(): string | null {
 
 export function setStoredToken(token: string) {
   localStorage.setItem("tmh_invite_token", token);
+  void mirrorTokenToSecureStorage(token);
 }
 
 export function clearStoredToken() {
   localStorage.removeItem("tmh_invite_token");
+  void mirrorTokenToSecureStorage(null);
 }
 
 /**
@@ -304,5 +329,20 @@ export async function unsubscribePush(endpoint: string): Promise<void> {
   await request<{ ok: boolean }>("/push/subscribe", {
     method: "DELETE",
     body: JSON.stringify({ endpoint }),
+  });
+}
+
+/** Register this device for native push (APNs/FCM) — mobile app only. */
+export async function registerDevice(deviceToken: string, platform: "ios" | "android"): Promise<void> {
+  await request<{ ok: boolean }>("/devices/register", {
+    method: "POST",
+    body: JSON.stringify({ device_token: deviceToken, platform }),
+  });
+}
+
+export async function unregisterDevice(deviceToken: string): Promise<void> {
+  await request<{ ok: boolean }>("/devices/register", {
+    method: "DELETE",
+    body: JSON.stringify({ device_token: deviceToken }),
   });
 }

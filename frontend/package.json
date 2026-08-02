@@ -12,9 +12,12 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@capacitor/core": "^8.4.1",
+    "@capacitor/push-notifications": "^8.1.1",
     "@types/react": "^19.2.9",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.2",
+    "capacitor-secure-storage-plugin": "^0.13.0",
     "embla-carousel-react": "^8.6.0",
     "heic2any": "^0.0.4",
     "react": "^19.2.3",

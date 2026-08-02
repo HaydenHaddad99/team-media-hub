@@ -14,6 +14,7 @@ import { SetupKeyPrompt } from "./components/SetupKeyPrompt";
 import { AppShell } from "./components/AppShell";
 import { InstallPrompt } from "./components/InstallPrompt";
 import { IOSInstallModal } from "./components/IOSInstallModal";
+import { NativePushRegistration } from "./components/NativePushRegistration";
 import { getCurrentToken } from "./lib/api";
 import { getRedirectFromLanding, rememberLastTeam } from "./lib/navigation";
 
@@ -328,6 +329,7 @@ export default function App() {
     <>
       <InstallPrompt />
       <IOSInstallModal />
+      <NativePushRegistration />
       <AppShell currentPage={currentPage} onSignOut={handleGlobalSignOut}>
         <Feed key={currentTeamId} onLogout={() => setHasToken(false)} />
       </AppShell>
