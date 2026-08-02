@@ -6,14 +6,17 @@ export function Privacy() {
     <div className="legal-page">
       <div className="legal-container">
         <h1>Privacy Policy</h1>
-        <p className="last-updated">Last updated: February 26, 2026</p>
+        <p className="last-updated">Last updated: August 2, 2026</p>
 
         <section>
           <h2>What We Collect</h2>
           <p>
             Team Media Hub collects only the information necessary to provide our service:
             your email address for authentication, team photos and videos you upload, and
-            basic usage data to improve the platform.
+            basic usage data to improve the platform. If you use our iOS or Android app and
+            enable notifications, we also store a device push token so we can notify you
+            when new photos are added to your team — this token is tied to your device, not
+            used for tracking, and never shared with third parties.
           </p>
         </section>
 
