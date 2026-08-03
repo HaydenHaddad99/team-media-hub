@@ -79,9 +79,24 @@ jobs:
         run: |
           rm -rf layers/ffmpeg
           mkdir -p layers/ffmpeg/bin
-          curl -fsSL --retry 3 --retry-delay 5 \
-            "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz" \
-            -o /tmp/ffmpeg.tar.xz
+          # curl's own --retry only covers connection/HTTP failures; it has
+          # been observed succeeding (200) with a truncated/corrupted body,
+          # which curl considers a success. So: download, verify the archive
+          # is actually intact with `xz -t`, and retry the whole attempt
+          # (not just the curl call) if it isn't.
+          for attempt in 1 2 3 4 5; do
+            curl -fsSL "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz" -o /tmp/ffmpeg.tar.xz
+            if xz -t /tmp/ffmpeg.tar.xz 2>/dev/null; then
+              break
+            fi
+            echo "Attempt $attempt: downloaded archive failed integrity check, retrying..."
+            rm -f /tmp/ffmpeg.tar.xz
+            if [ "$attempt" = "5" ]; then
+              echo "::error::ffmpeg download failed integrity check after 5 attempts"
+              exit 1
+            fi
+            sleep 5
+          done
           tar -xJ --strip-components=1 --wildcards -C layers/ffmpeg/bin '*/ffmpeg' -f /tmp/ffmpeg.tar.xz
           chmod +x layers/ffmpeg/bin/ffmpeg
           test -f layers/ffmpeg/bin/ffmpeg
