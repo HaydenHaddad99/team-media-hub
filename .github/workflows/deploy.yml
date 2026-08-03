@@ -3,6 +3,7 @@ name: Deploy
 on:
   push:
     branches: [main]
+  workflow_dispatch:  # Allow manual trigger from GitHub UI (e.g. after rotating a secret)
 
 permissions:
   id-token: write
