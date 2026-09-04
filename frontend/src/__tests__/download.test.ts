@@ -25,6 +25,17 @@ vi.mock('@capacitor/share', () => ({
 import { Capacitor } from '@capacitor/core';
 import { saveMediaToDevice } from '../lib/download';
 
+// Plain object standing in for a fetch Response. Constructing a real
+// `new Response(new Blob(...))` mixes jsdom's Blob with undici's Response,
+// which explodes with "object.stream is not a function" on CI's Node —
+// the plain object keeps everything inside jsdom's implementations.
+const mockResponse = (body: string, status = 200) =>
+  ({
+    ok: status >= 200 && status < 300,
+    status,
+    blob: async () => new Blob([body], { type: 'image/jpeg' }),
+  }) as unknown as Response;
+
 describe('saveMediaToDevice', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -41,9 +52,8 @@ describe('saveMediaToDevice', () => {
 
   it('fetches, writes to cache, shares, then cleans up on native', async () => {
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
-    const blob = new Blob(['fake-image-bytes'], { type: 'image/jpeg' });
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(blob, { status: 200 })
+      mockResponse('fake-image-bytes')
     );
 
     await saveMediaToDevice([{ url: 'https://cdn.example/a.jpg', filename: 'a.jpg' }]);
@@ -58,9 +68,7 @@ describe('saveMediaToDevice', () => {
 
   it('sanitizes path separators out of filenames', async () => {
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(new Blob(['x']), { status: 200 })
-    );
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse('x'));
 
     await saveMediaToDevice([{ url: 'https://cdn.example/a.jpg', filename: '../../etc/passwd' }]);
 
@@ -70,9 +78,8 @@ describe('saveMediaToDevice', () => {
 
   it('swallows share-sheet cancellation, propagates real errors', async () => {
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
-    // fresh Response per call — a body can only be consumed once
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(
-      async () => new Response(new Blob(['x']), { status: 200 })
+      async () => mockResponse('x')
     );
 
     share.mockRejectedValueOnce(new Error('Share canceled'));
@@ -89,9 +96,7 @@ describe('saveMediaToDevice', () => {
 
   it('throws on a failed fetch on native', async () => {
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(null, { status: 403 })
-    );
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse('', 403));
     await expect(
       saveMediaToDevice([{ url: 'https://cdn.example/a.jpg', filename: 'a.jpg' }])
     ).rejects.toThrow('Download failed (403)');
