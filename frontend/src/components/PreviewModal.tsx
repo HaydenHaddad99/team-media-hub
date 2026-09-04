@@ -186,7 +186,9 @@ export function PreviewModal({
     try {
       setDownloadingId(currentItem.media_id);
       setSaveStatus(null);
-      await saveMediaToDevice([{ url, filename: currentItem.filename }]);
+      await saveMediaToDevice([
+        { url, filename: currentItem.filename, contentType: currentItem.content_type },
+      ]);
       if (isNativePlatform()) {
         setSaveStatus("saved");
         setTimeout(() => setSaveStatus(null), 2500);

@@ -264,7 +264,11 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
       for (const id of Array.from(selectedIds)) {
         const res = await presignDownload(id);
         const item = items.find(it => it.media_id === id);
-        files.push({ url: res.download_url, filename: item?.filename || `${id}.jpg` });
+        files.push({
+          url: res.download_url,
+          filename: item?.filename || `${id}.jpg`,
+          contentType: item?.content_type,
+        });
       }
       // Web: opens each in a new tab. Native: one share sheet with all files.
       await saveMediaToDevice(files);
