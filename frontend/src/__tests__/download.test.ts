@@ -11,15 +11,16 @@ const writeFile = vi.fn(async (_opts: { path: string; data: string; directory: s
   uri: 'file:///cache/x',
 }));
 const deleteFile = vi.fn(async () => {});
-const share = vi.fn(async () => {});
+const savePhoto = vi.fn(async () => {});
+const saveVideo = vi.fn(async () => {});
 
 vi.mock('@capacitor/filesystem', () => ({
   Filesystem: { writeFile, deleteFile },
   Directory: { Cache: 'CACHE' },
 }));
 
-vi.mock('@capacitor/share', () => ({
-  Share: { share },
+vi.mock('@capacitor-community/media', () => ({
+  Media: { savePhoto, saveVideo },
 }));
 
 import { Capacitor } from '@capacitor/core';
@@ -29,11 +30,11 @@ import { saveMediaToDevice } from '../lib/download';
 // `new Response(new Blob(...))` mixes jsdom's Blob with undici's Response,
 // which explodes with "object.stream is not a function" on CI's Node —
 // the plain object keeps everything inside jsdom's implementations.
-const mockResponse = (body: string, status = 200) =>
+const mockResponse = (body: string, status = 200, type = 'image/jpeg') =>
   ({
     ok: status >= 200 && status < 300,
     status,
-    blob: async () => new Blob([body], { type: 'image/jpeg' }),
+    blob: async () => new Blob([body], { type }),
   }) as unknown as Response;
 
 describe('saveMediaToDevice', () => {
@@ -46,11 +47,11 @@ describe('saveMediaToDevice', () => {
     const open = vi.spyOn(window, 'open').mockReturnValue(null);
     await saveMediaToDevice([{ url: 'https://cdn.example/a.jpg', filename: 'a.jpg' }]);
     expect(open).toHaveBeenCalledWith('https://cdn.example/a.jpg', '_blank');
-    expect(share).not.toHaveBeenCalled();
+    expect(savePhoto).not.toHaveBeenCalled();
     open.mockRestore();
   });
 
-  it('fetches, writes to cache, shares, then cleans up on native', async () => {
+  it('fetches, writes to cache, saves photo to library, cleans up on native', async () => {
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       mockResponse('fake-image-bytes')
@@ -61,8 +62,34 @@ describe('saveMediaToDevice', () => {
     expect(fetchMock).toHaveBeenCalledWith('https://cdn.example/a.jpg');
     expect(writeFile).toHaveBeenCalledTimes(1);
     expect(writeFile.mock.calls[0]![0].path).toMatch(/a\.jpg$/);
-    expect(share).toHaveBeenCalledWith({ files: ['file:///cache/x'] });
+    expect(savePhoto).toHaveBeenCalledWith({ path: 'file:///cache/x' });
+    expect(saveVideo).not.toHaveBeenCalled();
     expect(deleteFile).toHaveBeenCalledTimes(1);
+    fetchMock.mockRestore();
+  });
+
+  it('routes videos to saveVideo by blob type', async () => {
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockResponse('fake-video-bytes', 200, 'video/quicktime')
+    );
+
+    await saveMediaToDevice([{ url: 'https://cdn.example/v', filename: 'clip' }]);
+
+    expect(saveVideo).toHaveBeenCalledWith({ path: 'file:///cache/x' });
+    expect(savePhoto).not.toHaveBeenCalled();
+    fetchMock.mockRestore();
+  });
+
+  it('routes videos to saveVideo by extension when blob type is generic', async () => {
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockResponse('fake-video-bytes', 200, 'application/octet-stream')
+    );
+
+    await saveMediaToDevice([{ url: 'https://cdn.example/v.mov', filename: 'IMG_9468.mov' }]);
+
+    expect(saveVideo).toHaveBeenCalledWith({ path: 'file:///cache/x' });
     fetchMock.mockRestore();
   });
 
@@ -76,21 +103,15 @@ describe('saveMediaToDevice', () => {
     fetchMock.mockRestore();
   });
 
-  it('swallows share-sheet cancellation, propagates real errors', async () => {
+  it('cleans up the temp file even when the library save fails', async () => {
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(
-      async () => mockResponse('x')
-    );
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse('x'));
+    savePhoto.mockRejectedValueOnce(new Error('permission denied'));
 
-    share.mockRejectedValueOnce(new Error('Share canceled'));
     await expect(
       saveMediaToDevice([{ url: 'https://cdn.example/a.jpg', filename: 'a.jpg' }])
-    ).resolves.toBeUndefined();
-
-    share.mockRejectedValueOnce(new Error('boom'));
-    await expect(
-      saveMediaToDevice([{ url: 'https://cdn.example/a.jpg', filename: 'a.jpg' }])
-    ).rejects.toThrow('boom');
+    ).rejects.toThrow('permission denied');
+    expect(deleteFile).toHaveBeenCalledTimes(1);
     fetchMock.mockRestore();
   });
 
@@ -100,7 +121,7 @@ describe('saveMediaToDevice', () => {
     await expect(
       saveMediaToDevice([{ url: 'https://cdn.example/a.jpg', filename: 'a.jpg' }])
     ).rejects.toThrow('Download failed (403)');
-    expect(share).not.toHaveBeenCalled();
+    expect(savePhoto).not.toHaveBeenCalled();
     fetchMock.mockRestore();
   });
 });
