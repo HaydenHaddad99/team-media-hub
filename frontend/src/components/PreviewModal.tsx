@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import useEmblaCarousel from "embla-carousel-react";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { MediaItem, presignDownload } from "../lib/api";
+import { saveMediaToDevice } from "../lib/download";
 
 type Props = {
   open: boolean;
@@ -182,8 +183,7 @@ export function PreviewModal({
     
     try {
       setDownloadingId(currentItem.media_id);
-      // Open the presigned URL directly - browser will download it
-      window.open(url, "_blank");
+      await saveMediaToDevice([{ url, filename: currentItem.filename }]);
     } catch (err) {
       console.error("Download failed", err);
     } finally {
