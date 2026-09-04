@@ -5,16 +5,19 @@ export type DownloadableFile = {
   filename: string;
 };
 
+const VIDEO_EXTENSIONS = /\.(mp4|mov|m4v|webm|avi|mkv)$/i;
+
 /**
  * Save media to the user's device.
  *
  * Web: opens the presigned URL in a new tab and lets the browser handle the
  * download (unchanged behavior).
  *
- * Native (Capacitor): fetches the file(s), writes them to the app's cache,
- * and presents the system share sheet — which on iOS/Android includes
- * "Save Image"/"Save Video" to the photo library. window.open would bounce
- * the user out of the app into their browser instead.
+ * Native (Capacitor): fetches the file, writes it to the app cache, and saves
+ * it directly into the photo library via @capacitor-community/media (iOS asks
+ * once for add-to-Photos permission). The share-sheet approach was abandoned:
+ * on iOS 26 UIActivityViewController failed to load cache-file items and
+ * self-dismissed as "Share canceled" without ever presenting.
  */
 export async function saveMediaToDevice(files: DownloadableFile[]): Promise<void> {
   if (files.length === 0) return;
@@ -29,37 +32,29 @@ export async function saveMediaToDevice(files: DownloadableFile[]): Promise<void
   }
 
   const { Filesystem, Directory } = await import("@capacitor/filesystem");
-  const { Share } = await import("@capacitor/share");
+  const { Media } = await import("@capacitor-community/media");
 
-  const written: string[] = [];
-  const paths: string[] = [];
-  try {
-    for (const f of files) {
-      const resp = await fetch(f.url);
-      if (!resp.ok) throw new Error(`Download failed (${resp.status})`);
-      const blob = await resp.blob();
-      const base64 = await blobToBase64(blob);
-      // filenames come from user uploads; strip path separators defensively
-      const safeName = f.filename.replace(/[/\\]/g, "_") || "media";
-      const path = `tmh-download-${Date.now()}-${safeName}`;
-      const result = await Filesystem.writeFile({
-        path,
-        data: base64,
-        directory: Directory.Cache,
-      });
-      written.push(result.uri);
-      paths.push(path);
-    }
-
-    await Share.share({ files: written });
-  } catch (err: any) {
-    // Dismissing the share sheet rejects with a cancellation message —
-    // that's a normal user action, not a failure.
-    const msg = String(err?.message || err);
-    if (/cancel/i.test(msg)) return;
-    throw err;
-  } finally {
-    for (const path of paths) {
+  for (const f of files) {
+    const resp = await fetch(f.url);
+    if (!resp.ok) throw new Error(`Download failed (${resp.status})`);
+    const blob = await resp.blob();
+    const base64 = await blobToBase64(blob);
+    // filenames come from user uploads; strip path separators defensively
+    const safeName = f.filename.replace(/[/\\]/g, "_") || "media";
+    const path = `tmh-download-${Date.now()}-${safeName}`;
+    const { uri } = await Filesystem.writeFile({
+      path,
+      data: base64,
+      directory: Directory.Cache,
+    });
+    try {
+      const isVideo = blob.type.startsWith("video/") || VIDEO_EXTENSIONS.test(safeName);
+      if (isVideo) {
+        await Media.saveVideo({ path: uri });
+      } else {
+        await Media.savePhoto({ path: uri });
+      }
+    } finally {
       Filesystem.deleteFile({ path, directory: Directory.Cache }).catch(() => {});
     }
   }

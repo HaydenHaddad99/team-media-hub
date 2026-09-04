@@ -3,6 +3,7 @@ import useEmblaCarousel from "embla-carousel-react";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { MediaItem, presignDownload } from "../lib/api";
 import { saveMediaToDevice } from "../lib/download";
+import { isNativePlatform } from "../lib/platform";
 
 type Props = {
   open: boolean;
@@ -41,6 +42,7 @@ export function PreviewModal({
   const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
   const [loadedIds, setLoadedIds] = useState<Set<string>>(new Set());
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<"saved" | "failed" | null>(null);
   const [dragOffsetY, setDragOffsetY] = useState(0);
   const [zoomScales, setZoomScales] = useState<Record<string, number>>({});
   const prefetchingRef = useRef<Set<string>>(new Set());
@@ -180,12 +182,19 @@ export function PreviewModal({
     if (!currentItem) return;
     const url = mediaUrls[currentItem.media_id] || currentItem.preview_url || "";
     if (!url) return;
-    
+
     try {
       setDownloadingId(currentItem.media_id);
+      setSaveStatus(null);
       await saveMediaToDevice([{ url, filename: currentItem.filename }]);
+      if (isNativePlatform()) {
+        setSaveStatus("saved");
+        setTimeout(() => setSaveStatus(null), 2500);
+      }
     } catch (err) {
       console.error("Download failed", err);
+      setSaveStatus("failed");
+      setTimeout(() => setSaveStatus(null), 3500);
     } finally {
       setDownloadingId(null);
     }
@@ -322,6 +331,26 @@ export function PreviewModal({
         </div>
 
         <div className="modalFooter">
+          {saveStatus && (
+            <div
+              role="status"
+              style={{
+                position: "absolute",
+                bottom: "72px",
+                left: "50%",
+                transform: "translateX(-50%)",
+                background: saveStatus === "saved" ? "rgba(20, 90, 50, 0.95)" : "rgba(120, 30, 30, 0.95)",
+                color: "#fff",
+                padding: "8px 16px",
+                borderRadius: "20px",
+                fontSize: "14px",
+                whiteSpace: "nowrap",
+                zIndex: 10,
+              }}
+            >
+              {saveStatus === "saved" ? "Saved to Photos ✓" : "Save failed — try again"}
+            </div>
+          )}
           <div className="modalActions">
             <button
               type="button"

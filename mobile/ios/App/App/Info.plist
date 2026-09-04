@@ -30,6 +30,8 @@
 	<string>Team Media Hub needs microphone access to record sound when you take a video to share with your team.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Team Media Hub saves photos and videos you download to your photo library.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Team Media Hub saves photos and videos you download to your photo library.</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
