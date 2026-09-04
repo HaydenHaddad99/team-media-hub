@@ -191,8 +191,16 @@ export function PreviewModal({
         setSaveStatus("saved");
         setTimeout(() => setSaveStatus(null), 2500);
       }
-    } catch (err) {
-      console.error("Download failed", err);
+    } catch (err: any) {
+      // Log the message/stack explicitly — Error properties are
+      // non-enumerable, so the bare object prints as "{}" in the
+      // Xcode/WebView console, which hides the actual cause.
+      console.error(
+        "Download failed:",
+        err?.message || err?.errorMessage || String(err),
+        err?.code || "",
+        err?.stack || ""
+      );
       setSaveStatus("failed");
       setTimeout(() => setSaveStatus(null), 3500);
     } finally {
