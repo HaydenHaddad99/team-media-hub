@@ -24,6 +24,10 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSCameraUsageDescription</key>
+	<string>Team Media Hub needs camera access so you can take photos and videos to share with your team.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Team Media Hub needs microphone access to record sound when you take a video to share with your team.</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
