@@ -133,6 +133,11 @@ class TeamMediaHubStack(Stack):
                 viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
                 allowed_methods=cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
                 cache_policy=cloudfront.CachePolicy.CACHING_OPTIMIZED,
+                # The mobile app fetch()es media to save it via the native share
+                # sheet — unlike <img> tags, fetch requires CORS headers. Signed
+                # URLs remain the actual access control; this only adds
+                # Access-Control-Allow-Origin to responses.
+                response_headers_policy=cloudfront.ResponseHeadersPolicy.CORS_ALLOW_ALL_ORIGINS,
             ),
             additional_behaviors={
                 # Signed URLs only - no public access

@@ -7,6 +7,7 @@ import { MediaGrid } from "../components/MediaGrid";
 import { AlbumGrid, AlbumData } from "../components/AlbumGrid";
 import { applyThumbUrlCache, clearThumbUrlCache } from "../lib/thumbUrlCache";
 import { isNativePlatform } from "../lib/platform";
+import { saveMediaToDevice } from "../lib/download";
 import "../styles/pages.css";
 
 export function Feed({ onLogout }: { onLogout: () => void }) {
@@ -259,13 +260,14 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
     if (selectedIds.size === 0) return;
     try {
       setErr(null);
-      // fetch presigned URLs sequentially and open in new tabs
+      const files = [];
       for (const id of Array.from(selectedIds)) {
         const res = await presignDownload(id);
-        // best-effort: open in new tab; browsers may block multiple tabs
-        window.open(res.download_url, "_blank");
-        await new Promise(r => setTimeout(r, 200));
+        const item = items.find(it => it.media_id === id);
+        files.push({ url: res.download_url, filename: item?.filename || `${id}.jpg` });
       }
+      // Web: opens each in a new tab. Native: one share sheet with all files.
+      await saveMediaToDevice(files);
     } catch (ex: any) {
       setErr(ex?.message || "Failed to download selection");
     }
