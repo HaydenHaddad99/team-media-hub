@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import useEmblaCarousel from "embla-carousel-react";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import type { ReactZoomPanPinchRef } from "react-zoom-pan-pinch";
 import { MediaItem, presignDownload } from "../lib/api";
 import { saveMediaToDevice } from "../lib/download";
 import { isNativePlatform } from "../lib/platform";
@@ -43,6 +44,12 @@ export function PreviewModal({
   const [loadedIds, setLoadedIds] = useState<Set<string>>(new Set());
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<"saved" | "failed" | null>(null);
+  // Immersive = iPhone Photos style: chrome hidden, media edge-to-edge.
+  const [immersive, setImmersive] = useState(false);
+  const transformRefs = useRef<Record<string, ReactZoomPanPinchRef | null>>({});
+  // Distinguishes a chrome-toggling single tap from a zooming double tap.
+  const tapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tapStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
   const [dragOffsetY, setDragOffsetY] = useState(0);
   const [zoomScales, setZoomScales] = useState<Record<string, number>>({});
   const prefetchingRef = useRef<Set<string>>(new Set());
@@ -162,6 +169,7 @@ export function PreviewModal({
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     setDragOffsetY(0);
+    setImmersive(false);
     swipeStartRef.current = null;
     return () => {
       document.body.style.overflow = previousOverflow;
@@ -170,13 +178,17 @@ export function PreviewModal({
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      // Escape backs out of immersive first, then closes the modal.
+      if (e.key === "Escape") {
+        if (immersive) setImmersive(false);
+        else onClose();
+      }
       if (e.key === "ArrowLeft" && emblaApi) emblaApi.scrollPrev();
       if (e.key === "ArrowRight" && emblaApi) emblaApi.scrollNext();
     }
     if (open) window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose, emblaApi]);
+  }, [open, onClose, emblaApi, immersive]);
 
   async function handleDownload() {
     if (!currentItem) return;
@@ -212,8 +224,48 @@ export function PreviewModal({
 
   if (!open || !currentItem) return null;
 
+  const currentScale = currentItem ? zoomScales[currentItem.media_id] || 1 : 1;
+
+  /**
+   * Toggle iPhone-Photos-style immersive mode. Leaving it also resets zoom,
+   * so the image returns to its framed size along with the chrome.
+   */
+  function toggleImmersive(mediaId: string) {
+    setImmersive((prev) => {
+      if (prev) transformRefs.current[mediaId]?.resetTransform();
+      return !prev;
+    });
+  }
+
+  // A tap only counts if the finger barely moved (otherwise it's a pan) and
+  // no second tap follows within the double-tap window (otherwise it's a zoom).
+  function handleMediaPointerDown(e: React.PointerEvent) {
+    tapStartRef.current = { x: e.clientX, y: e.clientY, t: Date.now() };
+  }
+
+  function handleMediaPointerUp(e: React.PointerEvent, mediaId: string) {
+    const start = tapStartRef.current;
+    tapStartRef.current = null;
+    if (!start) return;
+    const moved = Math.hypot(e.clientX - start.x, e.clientY - start.y);
+    if (moved > 10 || Date.now() - start.t > 300) return;
+
+    if (tapTimerRef.current) {
+      // Second tap inside the window — let the library handle the zoom.
+      clearTimeout(tapTimerRef.current);
+      tapTimerRef.current = null;
+      return;
+    }
+    tapTimerRef.current = setTimeout(() => {
+      tapTimerRef.current = null;
+      toggleImmersive(mediaId);
+    }, 280);
+  }
+
   function handleSwipeStart(e: React.TouchEvent) {
     if (e.touches.length !== 1) return;
+    // While zoomed, vertical drags pan the image — don't also drag the sheet.
+    if (currentScale > 1) return;
     swipeStartRef.current = {
       x: e.touches[0].clientX,
       y: e.touches[0].clientY,
@@ -238,9 +290,14 @@ export function PreviewModal({
   }
 
   return (
-    <div className="modalOverlay" role="dialog" aria-modal="true" onClick={onClose}>
+    <div
+      className={`modalOverlay${immersive ? " modalOverlay--immersive" : ""}`}
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+    >
       <div
-        className="modalCard"
+        className={`modalCard${immersive ? " modalCard--immersive" : ""}`}
         onClick={(e) => e.stopPropagation()}
         onTouchStart={handleSwipeStart}
         onTouchMove={handleSwipeMove}
@@ -250,7 +307,7 @@ export function PreviewModal({
           transition: dragOffsetY ? "none" : "transform 0.2s ease",
         }}
       >
-        <div className="modalHeader">
+        <div className="modalHeader" hidden={immersive}>
           {items.length > 1 && (
             <div className="modalCounter">{selectedIndex + 1} / {items.length}</div>
           )}
@@ -262,7 +319,16 @@ export function PreviewModal({
           </button>
         </div>
 
-        <div className="modalBody" style={{ position: "relative", minHeight: 400, background: "linear-gradient(135deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.6) 100%)" }}>
+        <div
+          className={`modalBody${immersive ? " modalBody--immersive" : ""}`}
+          style={{
+            position: "relative",
+            minHeight: immersive ? undefined : 400,
+            background: immersive
+              ? "#000"
+              : "linear-gradient(135deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.6) 100%)",
+          }}
+        >
           <div className="embla" ref={emblaRef}>
             <div className="embla__container">
               {items.map((item, idx) => {
@@ -273,7 +339,21 @@ export function PreviewModal({
                 const isLoaded = loadedIds.has(mediaId);
                 return (
                   <div className={`embla__slide ${idx === selectedIndex ? "embla__slide--selected" : ""}`} key={mediaId}>
-                    <div className="embla__slide__inner">
+                    <div
+                      className="embla__slide__inner"
+                      // Handlers live here, not on the <img>: the zoom library's
+                      // own wrapper div sits above the image and swallows the
+                      // pointer events. This also lets taps on the letterboxed
+                      // area toggle, same as Photos. Videos are excluded so the
+                      // playback controls stay usable.
+                      {...(!isVideo(item.content_type)
+                        ? {
+                            onPointerDown: handleMediaPointerDown,
+                            onPointerUp: (e: React.PointerEvent) =>
+                              handleMediaPointerUp(e, mediaId),
+                          }
+                        : {})}
+                    >
                       {!isVideo(item.content_type) && item.thumb_url && (
                         <img
                           className="modalMedia modalMedia-placeholder"
@@ -306,13 +386,19 @@ export function PreviewModal({
                           <TransformWrapper
                             key={mediaId}
                             minScale={1}
-                            maxScale={3}
+                            maxScale={4}
                             doubleClick={{ mode: "toggle", step: 2 }}
                             pinch={{ step: 5 }}
                             wheel={{ step: 0.2 }}
                             panning={{ disabled: (zoomScales[mediaId] || 1) === 1 }}
+                            onInit={(ref) => {
+                              transformRefs.current[mediaId] = ref;
+                            }}
                             onTransformed={(ref) => {
                               setZoomScales((prev) => ({ ...prev, [mediaId]: ref.state.scale }));
+                              // Pinching past 1x jumps straight to immersive,
+                              // matching Photos' behavior.
+                              if (ref.state.scale > 1) setImmersive(true);
                             }}
                           >
                             <TransformComponent>
@@ -340,7 +426,7 @@ export function PreviewModal({
           {/* Arrow buttons removed — swipe left/right to navigate, keyboard arrows also work */}
         </div>
 
-        <div className="modalFooter">
+        <div className="modalFooter" hidden={immersive}>
           {saveStatus && (
             <div
               role="status"

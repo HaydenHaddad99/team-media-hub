@@ -959,3 +959,65 @@ html, body {
   animation: spin 0.8s linear infinite;
   margin: 0 auto;
 }
+
+/* ---------------------------------------------------------------
+   Immersive preview (iPhone Photos style): tapping the image hides
+   the chrome and lets the media fill the screen edge-to-edge.
+   --------------------------------------------------------------- */
+.modalOverlay--immersive {
+  padding: 0;
+  background: #000;
+}
+
+.modalCard--immersive {
+  width: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
+  border: none;
+  border-radius: 0;
+  background: #000;
+}
+
+.modalBody--immersive {
+  padding: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modalCard--immersive .embla,
+.modalCard--immersive .embla__container,
+.modalCard--immersive .embla__slide {
+  height: 100dvh;
+}
+
+.modalCard--immersive .embla__slide__inner {
+  min-height: 100dvh;
+  height: 100dvh;
+  transform: none;
+}
+
+/* Let the zoom surface fill the screen so panning covers the whole image. */
+.modalCard--immersive .react-transform-wrapper,
+.modalCard--immersive .react-transform-component {
+  width: 100%;
+  height: 100dvh;
+}
+
+.modalCard--immersive .modalMedia {
+  max-height: 100dvh;
+  height: 100dvh;
+  width: 100%;
+  border: none;
+  border-radius: 0;
+  object-fit: contain;
+  background: #000;
+}
+
+/* .modalHeader/.modalFooter set display:flex, which beats the UA stylesheet's
+   [hidden]{display:none} at equal specificity — so hiding needs to be explicit. */
+.modalHeader[hidden],
+.modalFooter[hidden] {
+  display: none;
+}
