@@ -953,26 +953,6 @@
 }
 
 /* Back button inside toolbar when viewing album contents */
-.feed-v2-album-back {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.8);
-  border-radius: 6px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.feed-v2-album-back:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-}
-
 .feed-v2-album-title {
   font-size: 18px;
   font-weight: 700;

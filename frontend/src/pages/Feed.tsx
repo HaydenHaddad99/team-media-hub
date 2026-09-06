@@ -609,13 +609,6 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
             <div className="feed-v2-grid-section">
               <div className="feed-v2-toolbar">
                 <div className="feed-v2-toolbar-left feed-v2-toolbar-left--album">
-                  <button
-                    type="button"
-                    className="feed-v2-album-back"
-                    onClick={() => { setAlbumView(true); setAlbumFilter("all"); setSelectMode(false); }}
-                  >
-                    ← Albums
-                  </button>
                   <h2 className="feed-v2-album-title">
                     {albumFilter === "all" ? "All uploads" : albumFilter}
                   </h2>
@@ -828,7 +821,14 @@ export function Feed({ onLogout }: { onLogout: () => void }) {
         <button
           type="button"
           className={`feed-tab-item${activeTab === "albums" ? " feed-tab-item--active" : ""}`}
-          onClick={() => setActiveTab("albums")}
+          // Also backs out of an open album, so this tab is the single way
+          // back to the album list (there's no separate back button).
+          onClick={() => {
+            setActiveTab("albums");
+            setAlbumView(true);
+            setAlbumFilter("all");
+            setSelectMode(false);
+          }}
         >
           <svg className="feed-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="3" width="7" height="7" rx="1" />
