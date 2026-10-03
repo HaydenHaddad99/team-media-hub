@@ -1,20 +1,37 @@
 import React, { useState, useEffect } from 'react';
+import { AppStoreBadge } from './AppStoreBadge';
 import './IOSInstallModal.css';
 
+/**
+ * Invites iPhone users to the native App Store app.
+ *
+ * Previously this walked them through "Add to Home Screen" to install the
+ * PWA; now that a real iOS app ships, the native app is the better
+ * destination (push notifications, save-to-Photos, full-screen viewer).
+ * Android is untouched — InstallPrompt still offers the PWA install there,
+ * which remains the best option until a Play Store app exists.
+ */
 export const IOSInstallModal: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
-    // Check if on iOS Safari
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
-    
+
     if (!isIOS || !isSafari) {
       return;
     }
 
-    // Check if already dismissed
-    const dismissed = localStorage.getItem('tmh_ios_install_dismissed');
+    // Already running as an installed app (home-screen PWA or the native
+    // shell) — nothing to advertise.
+    const isStandalone =
+      window.matchMedia?.('(display-mode: standalone)').matches ||
+      (window.navigator as { standalone?: boolean }).standalone === true;
+    if (isStandalone) {
+      return;
+    }
+
+    const dismissed = localStorage.getItem('tmh_ios_appstore_dismissed');
     if (dismissed) {
       return;
     }
@@ -23,7 +40,7 @@ export const IOSInstallModal: React.FC = () => {
     const hasInviteToken = localStorage.getItem('tmh_invite_token');
     const hasTeamId = localStorage.getItem('team_id');
     const hasUserToken = localStorage.getItem('tmh_user_token');
-    
+
     if (hasInviteToken || (hasUserToken && hasTeamId)) {
       // Show after short delay to avoid overwhelming user
       setTimeout(() => {
@@ -33,7 +50,7 @@ export const IOSInstallModal: React.FC = () => {
   }, []);
 
   const handleDismiss = () => {
-    localStorage.setItem('tmh_ios_install_dismissed', 'true');
+    localStorage.setItem('tmh_ios_appstore_dismissed', 'true');
     setShowModal(false);
   };
 
@@ -45,58 +62,32 @@ export const IOSInstallModal: React.FC = () => {
     <div className="ios-install-overlay">
       <div className="ios-install-modal">
         <div className="ios-install-header">
-          <h2>📱 Install Team Media Hub</h2>
-          <button className="ios-install-close" onClick={handleDismiss}>✕</button>
+          <h2>📱 Get the iPhone app</h2>
+          <button className="ios-install-close" onClick={handleDismiss} aria-label="Close">✕</button>
         </div>
 
         <div className="ios-install-content">
           <p className="ios-install-intro">
-            Add Team Media Hub to your home screen for quick access
+            Team Media Hub is on the App Store — free, and built for your phone.
           </p>
 
-          <div className="ios-install-steps">
-            <div className="ios-install-step">
-              <div className="step-number">1</div>
-              <div className="step-content">
-                <p className="step-title">Tap the Share button</p>
-                <p className="step-description">Look for the arrow pointing up at the bottom of your screen</p>
-              </div>
-            </div>
-
-            <div className="ios-install-step">
-              <div className="step-number">2</div>
-              <div className="step-content">
-                <p className="step-title">Select "Add to Home Screen"</p>
-                <p className="step-description">Scroll down in the menu to find this option</p>
-              </div>
-            </div>
-
-            <div className="ios-install-step">
-              <div className="step-number">3</div>
-              <div className="step-content">
-                <p className="step-title">Confirm and Add</p>
-                <p className="step-description">Tap the "Add" button in the top right corner</p>
-              </div>
-            </div>
+          <div className="ios-install-benefits">
+            <ul>
+              <li>Get notified when new photos are added</li>
+              <li>Save photos and videos straight to your camera roll</li>
+              <li>Full-screen photo viewing</li>
+              <li>Opens right from your home screen</li>
+            </ul>
           </div>
 
-          <div className="ios-install-benefits">
-            <p className="benefits-title">✨ Benefits:</p>
-            <ul>
-              <li>No need to visit a website</li>
-              <li>Icon on your home screen</li>
-              <li>Full-screen experience</li>
-              <li>Faster access to your photos</li>
-            </ul>
+          <div className="ios-install-badge-row">
+            <AppStoreBadge />
           </div>
         </div>
 
         <div className="ios-install-footer">
           <button className="ios-install-later" onClick={handleDismiss}>
             Maybe Later
-          </button>
-          <button className="ios-install-got-it" onClick={handleDismiss}>
-            Got It!
           </button>
         </div>
       </div>
