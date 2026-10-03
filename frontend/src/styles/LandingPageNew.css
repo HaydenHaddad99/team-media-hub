@@ -354,3 +354,39 @@
     gap: 10px;
   }
 }
+
+/* ── App Store badge ─────────────────────────────────────────── */
+.app-store-badge {
+  display: inline-block;
+  line-height: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.app-store-badge:hover {
+  opacity: 0.85;
+  transform: translateY(-1px);
+}
+
+.app-store-badge img {
+  display: block;
+  height: 40px;
+  width: auto;
+}
+
+.hero-appstore {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+.hero-appstore-label {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.55);
+  letter-spacing: 0.2px;
+}
+
+.footer-appstore {
+  margin-bottom: 18px;
+}

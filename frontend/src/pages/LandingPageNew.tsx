@@ -1,4 +1,5 @@
 import React from "react";
+import { AppStoreBadge } from "../components/AppStoreBadge";
 import "../styles/LandingPageNew.css";
 
 interface LandingPageNewProps {
@@ -54,6 +55,11 @@ export function LandingPageNew({ onReady }: LandingPageNewProps) {
           >
             Find Your Team
           </button>
+
+          <div className="hero-appstore">
+            <span className="hero-appstore-label">Also on iPhone</span>
+            <AppStoreBadge />
+          </div>
 
           <p className="coach-link">
             <button
@@ -143,6 +149,7 @@ export function LandingPageNew({ onReady }: LandingPageNewProps) {
 
       {/* Footer */}
       <footer className="footer">
+        <AppStoreBadge className="footer-appstore" />
         <p>© 2026 Team Media Hub. Built for coaches. By coaches.</p>
         <div className="footer-links">
           <a
